@@ -1,12 +1,12 @@
 # Transmisor y trabajos programados (D-11). Lo invoca Cloud Scheduler.
-FROM python:3.14-slim AS build
+FROM python:3.15-slim AS build
 
 WORKDIR /build
 COPY requirements.txt .
 RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 
 
-FROM python:3.14-slim
+FROM python:3.15-slim
 
 RUN groupadd --system --gid 10001 verdeazul \
  && useradd --system --uid 10001 --gid verdeazul --no-create-home verdeazul
