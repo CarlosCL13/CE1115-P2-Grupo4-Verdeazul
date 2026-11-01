@@ -24,7 +24,7 @@ jobs:
     name: Pruebas de la matriz
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-python@v5
         with:
@@ -45,7 +45,7 @@ jobs:
     name: Politicas en Rego
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Instalar OPA
         run: |
@@ -67,7 +67,7 @@ jobs:
       matrix:
         componente: [api, edge, policies, transmisor]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # Se construye sin publicar. El enunciado exige que la imagen construya
       # sin intervencion manual (§3.2) y esto es justo lo que lo comprueba.
@@ -78,7 +78,7 @@ jobs:
     name: Buscar credenciales versionadas
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # gitleaks necesita el historial completo: el valor de esto es
           # detectar una credencial que se subio y despues se borro.
