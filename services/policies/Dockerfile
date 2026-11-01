@@ -2,7 +2,7 @@
 # en la interfaz local: ver D-06 en docs/P2_Desviaciones_respecto_P1.md.
 #
 # La imagen oficial de OPA ya corre sin root.
-FROM openpolicyagent/opa:1.4.2-static
+FROM openpolicyagent/opa:1.21.4-static
 
 COPY rego /politicas
 
