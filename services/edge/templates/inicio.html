@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block contenido %}
+<h1>Verificar un certificado</h1>
+
+<p>
+  Cualquiera puede comprobar un certificado de carbono sin tener acceso al
+  sistema. Subí el archivo y se comprueba si la firma es válida y si el
+  contenido fue modificado.
+</p>
+
+<form method="post" action="/verificar" enctype="multipart/form-data">
+  <label for="archivo">Archivo del certificado</label>
+  <input type="file" id="archivo" name="archivo" accept=".json" required>
+  <button type="submit">Verificar</button>
+</form>
+
+<p class="nota">
+  Este punto es público y no pide sesión: no consulta la base de datos ni
+  revela nada. Comprueba la firma con la clave pública que viaja dentro del
+  propio archivo. Ver D-09.
+</p>
+{% endblock %}

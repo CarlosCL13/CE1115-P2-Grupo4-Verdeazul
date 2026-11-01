@@ -1,0 +1,64 @@
+# Secretos: nada de esto entra al repositorio nunca.
+# Una credencial versionada anula el criterio completo de gestion de secretos,
+# y queda en el historial de git aunque se borre despues.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p8
+*.pfx
+*-key.json
+service-account*.json
+credentials*.json
+secrets/
+.neon
+.gcloud/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Node (si se usa Angular)
+node_modules/
+dist/
+.angular/
+
+# Entorno local
+.DS_Store
+Thumbs.db
+*.log
+.idea/
+.vscode/
+
+# Artefactos de LaTeX de los documentos
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.lof
+*.lot
+*.out
+*.synctex.gz
+*.toc
+
+# Documentos que no se versionan.
+#
+# El enunciado es material del profesor y el repositorio es publico: no es
+# nuestro para republicarlo. Los documentos de la Parte 1 son del grupo, pero
+# el profesor ya los tiene y pesan 5.9 MB en PDF.
+#
+# Siguen en el disco de cada uno, solo no entran a git. La matriz, los roles y
+# las condiciones C1-C11 viven transcritas en contracts/matriz.md, que es lo
+# que uno consulta cien veces mientras programa.
+docs/Enunciado_P2/
+docs/Docs_P1/

@@ -1,0 +1,93 @@
+# Revision semanal de dependencias. §3.3 del enunciado lo exige, y vale 10
+# puntos junto con contenedores y registro.
+#
+# Ojo: este archivo configura las ACTUALIZACIONES DE VERSION. Las ALERTAS de
+# seguridad son otra cosa y se encienden en Settings -> Code security del
+# repositorio. El enunciado pide las dos: que este activo, y que si aparece una
+# alerta durante el proyecto se atienda al menos una y se documente.
+#
+# Un ecosistema por componente: Dependabot no busca de forma recursiva, asi que
+# cada directorio con requirements.txt o Dockerfile necesita su entrada. Si
+# alguien agrega un componente nuevo y olvida la entrada, sus dependencias
+# quedan sin vigilar.
+
+version: 2
+
+updates:
+  # --- Paquetes de Python, uno por servicio --------------------------------
+  - package-ecosystem: pip
+    directory: /services/api
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    labels: [dependencias, seguridad]
+    groups:
+      python-api:
+        patterns: ["*"]
+
+  - package-ecosystem: pip
+    directory: /services/edge
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    labels: [dependencias, seguridad]
+    groups:
+      python-edge:
+        patterns: ["*"]
+
+  - package-ecosystem: pip
+    directory: /services/transmisor
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    labels: [dependencias, seguridad]
+    groups:
+      python-transmisor:
+        patterns: ["*"]
+
+  # --- Imagenes base de los cuatro componentes -----------------------------
+  - package-ecosystem: docker
+    directory: /services/api
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    labels: [dependencias, contenedores]
+
+  - package-ecosystem: docker
+    directory: /services/edge
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    labels: [dependencias, contenedores]
+
+  - package-ecosystem: docker
+    directory: /services/policies
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    labels: [dependencias, contenedores]
+
+  - package-ecosystem: docker
+    directory: /services/transmisor
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    labels: [dependencias, contenedores]
+
+  # --- Las acciones de los workflows ---------------------------------------
+  # Una accion comprometida corre con acceso al repositorio, asi que vigilarlas
+  # no es higiene menor.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    labels: [dependencias]

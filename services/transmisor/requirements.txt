@@ -1,0 +1,4 @@
+# Pendiente: congelar versiones exactas.
+fastapi
+uvicorn[standard]
+psycopg[binary]

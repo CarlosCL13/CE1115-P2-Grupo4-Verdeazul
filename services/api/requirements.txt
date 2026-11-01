@@ -1,0 +1,6 @@
+# Pendiente: congelar las versiones exactas con `pip freeze` despues de la
+# primera construccion que funcione. P1 se comprometio a dependencias fijadas
+# (E4, ficha de lenguaje), y Dependabot avisa mejor sobre versiones fijas.
+fastapi
+uvicorn[standard]
+psycopg[binary]

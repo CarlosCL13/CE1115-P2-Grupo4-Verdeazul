@@ -1,0 +1,6 @@
+# Pendiente: congelar versiones exactas con `pip freeze` tras la primera
+# construccion que funcione (E4 de P1 y mejor senal de Dependabot).
+fastapi
+uvicorn[standard]
+jinja2
+httpx

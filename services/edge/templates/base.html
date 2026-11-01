@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block titulo %}Verdeazul Carbono{% endblock %}</title>
+  <link rel="stylesheet" href="/static/estilo.css">
+</head>
+<body>
+  <header>
+    <strong>Verdeazul Carbono</strong>
+    <nav>
+      {% if sesion %}
+        <span class="rol">{{ sesion.rol }}</span>
+        <form method="post" action="/salir"><button>Salir</button></form>
+      {% else %}
+        <a href="/entrar">Entrar</a>
+      {% endif %}
+    </nav>
+  </header>
+
+  <main>
+    {% block contenido %}{% endblock %}
+  </main>
+
+  <footer>
+    Plataforma de certificación de captura de carbono · versión {{ version }}
+  </footer>
+</body>
+</html>

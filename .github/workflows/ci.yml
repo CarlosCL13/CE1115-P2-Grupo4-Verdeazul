@@ -1,0 +1,92 @@
+# Integracion continua. Corre en cada pull request y en cada empuje a main.
+#
+# Que NO hace: no toca Google Cloud. No publica imagenes ni despliega. Eso va
+# en un workflow aparte cuando la facturacion este resuelta, y con federacion
+# de identidad, no con un archivo de credenciales.
+#
+# Por que importa que esto exista desde el primer dia: cuando un frente abre un
+# pull request se corren las pruebas de los cinco. Si su cambio rompe algo de
+# otro, se sabe antes de fusionar y no el 18 de noviembre.
+
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, develop]
+
+# Minimo privilegio: el workflow solo necesita leer el codigo.
+permissions:
+  contents: read
+
+jobs:
+  pruebas:
+    name: Pruebas de la matriz
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Instalar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r services/api/requirements.txt
+          pip install pytest
+
+      # El pythonpath lo fija pytest.ini, no una variable de entorno: asi
+      # corre igual aqui que en la maquina de cada uno.
+      - name: Cobertura de la matriz
+        run: pytest tests/matriz -v
+
+  politicas:
+    name: Politicas en Rego
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar OPA
+        run: |
+          curl -sSL -o opa https://openpolicyagent.org/downloads/v1.4.2/opa_linux_amd64_static
+          chmod +x opa
+          sudo mv opa /usr/local/bin/
+
+      - name: Formato de las politicas
+        run: opa fmt --fail --list services/policies/rego
+
+      - name: Pruebas de las politicas
+        run: opa test services/policies/rego -v
+
+  imagenes:
+    name: Construir imagenes
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        componente: [api, edge, policies, transmisor]
+    steps:
+      - uses: actions/checkout@v4
+
+      # Se construye sin publicar. El enunciado exige que la imagen construya
+      # sin intervencion manual (§3.2) y esto es justo lo que lo comprueba.
+      - name: docker build ${{ matrix.componente }}
+        run: docker build -t verdeazul-${{ matrix.componente }}:ci services/${{ matrix.componente }}
+
+  secretos:
+    name: Buscar credenciales versionadas
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # gitleaks necesita el historial completo: el valor de esto es
+          # detectar una credencial que se subio y despues se borro.
+          fetch-depth: 0
+
+      # §7.1: una credencial en el repositorio hace perder el total del
+      # criterio de secretos, aunque el sistema funcione. Y el historial de git
+      # conserva lo que se borra despues, asi que esto va sobre el historial.
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
