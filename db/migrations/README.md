@@ -1,20 +1,52 @@
 # Migraciones de `verdeazul-app`
 
-SQL plano, numerado, que se aplica en orden y nunca se edita una vez fusionado.
-Si algo está mal, se corrige con una migración nueva.
+SQL plano, numerado, que se aplica en orden con `app_migrate`:
 
 ```
-001_extensiones.sql     postgis
-002_objetos.sql         las tablas de O1 a O10
-003_indices.sql         GiST sobre certificados.poligono, y los demás
-004_salida.sql          la bandeja de salida del patrón outbox
+python db/migrar.py app
 ```
 
-Se aplican con el rol **`app_migrate`**, nunca con `app_rw` ni con
-`neondb_owner`. La aplicación en ejecución no puede alterar el esquema, y eso
-es parte de lo que compensa que las credenciales de Neon sean estáticas (D-03).
+Un archivo ya aplicado **no se edita nunca**. `migrar.py` guarda la huella de
+cada uno y se niega a seguir si cambió. Si algo está mal, se corrige con una
+migración nueva.
 
-Qué tiene que existir y por qué: [`contracts/01-esquema.md`](../../contracts/01-esquema.md).
+El número lo toma quien crea el archivo. Si dos personas toman el mismo, lo
+resuelve el pull request.
 
-**Todavía no hay ninguna migración escrita.** Es el siguiente paso y es el
-contrato que desbloquea a los otros cuatro frentes.
+## Plan
+
+```
+002_cimientos.sql     zonas, cuentas
+003_nucleo.sql        fincas (PostGIS + GiST), periodos_medicion, mediciones
+004_identidad.sql     credenciales, sesiones, datos_personales
+005_atributos.sql     asignaciones_zona, consentimientos,
+                      ventanas_auditoria, solicitudes_rol
+006_cierre.sql        enmiendas, certificados, eventos_pendientes
+```
+
+La 001 no está aquí: crea los roles y va en [`../roles/`](../roles/), porque se
+aplica como dueño y una sola vez.
+
+La 002 es la urgente. Hasta que exista `cuentas`, nadie puede crear una tabla
+con llave foránea hacia ella, y once de las dieciséis la referencian.
+
+Qué tabla lleva qué columnas y por qué:
+[`contracts/01-esquema.md`](../../contracts/01-esquema.md).
+
+**Todavía no hay ninguna escrita.**
+
+## Dos cosas que no se pueden olvidar
+
+En la 003, el `GRANT` por columna sobre `mediciones`:
+
+```sql
+REVOKE UPDATE ON mediciones FROM app_rw;
+GRANT  UPDATE (estado, revisada_por, motivo_devolucion) ON mediciones TO app_rw;
+```
+
+Los privilegios por omisión dan UPDATE sobre toda la tabla, así que hay que
+quitarlo y volver a darlo por columna. Eso impide que la aplicación modifique
+`biomasa_toneladas`, que es «ningún rol tiene M en O3» aplicado por el motor.
+
+En la 006, el `GRANT` a `outbox_rw` sobre `eventos_pendientes`, que es la única
+tabla que ese rol debe ver.
