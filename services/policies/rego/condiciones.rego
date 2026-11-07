@@ -3,11 +3,10 @@ package verdeazul.condiciones
 
 import rego.v1
 
-# Si la peticion no trae atributos, el objeto vacio hace que toda condicion
-# falle, que es el comportamiento correcto.
+# Si la peticion no trae atributos, el objeto vacio hace que toda condicion falle, que es el comportamiento correcto
 default atributos := {}
 
-atributos := input.objeto.atributos
+atributos := input.objeto.atributos # es un diccionario de atributos que tiene el objeto en cuestión
 
 # ---------------------------------------------------------------------------
 # C1 - ABAC de zona
@@ -39,7 +38,7 @@ cumplidas contains "C2" if {
 # Si se olvida enviar un atributo el valor de este queda indefinido, la condicion no se cumple y se niega
 # ---------------------------------------------------------------------------
 cumplidas contains "C3" if {
-	atributos["medicion.autor"] != input.sujeto.id
+	atributos["medicion.autor_id"] != input.sujeto.id
 	atributos["contexto.sujeto_midio_en_finca_periodo"] == false # Llega como contexto, ya backend verificó eso y pasa true/false
 }
 
@@ -50,7 +49,7 @@ cumplidas contains "C3" if {
 # Quien revisa no puede ser quien la solicitó
 # ---------------------------------------------------------------------------
 cumplidas contains "C4" if {
-	atributos["enmienda.solicitante"] != input.sujeto.id
+	atributos["enmienda.solicitante_id"] != input.sujeto.id
 }
 
 # ---------------------------------------------------------------------------
@@ -62,8 +61,8 @@ cumplidas contains "C4" if {
 # ---------------------------------------------------------------------------
 cumplidas contains "C5" if {
 	atributos["enmienda.estado"] == "REVISADA"
-	atributos["enmienda.solicitante"] != input.sujeto.id
-	atributos["enmienda.revisor"] != input.sujeto.id # el sujeto aquí es quien cierra la enmienda
+	atributos["enmienda.solicitante_id"] != input.sujeto.id
+	atributos["enmienda.revisor_id"] != input.sujeto.id # el sujeto aquí es quien cierra la enmienda
 }
 
 # ---------------------------------------------------------------------------
@@ -78,7 +77,7 @@ cumplidas contains "C5" if {
 # ---------------------------------------------------------------------------
 cumplidas contains "C6" if {
 	atributos["medicion.estado"] == "APROBADA"
-	atributos["medicion.autor"] != input.sujeto.id # el sujeto aquí es quien emite el certificado
+	atributos["medicion.autor_id"] != input.sujeto.id # el sujeto aquí es quien emite el certificado
 	atributos["contexto.poligono_traslapa_certificado_vigente"] == false
 }
 
@@ -104,7 +103,7 @@ cumplidas contains "C7" if {
 # El dueño de la finca solo el puede ver y modificar lo que es suyo
 # ---------------------------------------------------------------------------
 cumplidas contains "C8" if {
-	atributos["finca.propietario"] == input.sujeto.id # el sujeto aquí es el dueño de la finca
+	atributos["finca.propietario_id"] == input.sujeto.id # el sujeto aquí es el dueño de la finca
 }
 
 # ---------------------------------------------------------------------------
@@ -114,7 +113,7 @@ cumplidas contains "C8" if {
 # El tercero es el autorizado y la autorizacion no ha vencido. Es Estricto <, osea, el dia que vence, ya no sirve
 # ---------------------------------------------------------------------------
 cumplidas contains "C9" if {
-	atributos["autorizacion.tercero"] == input.sujeto.id
+	atributos["autorizacion.tercero_id"] == input.sujeto.id
 	atributos["contexto.hoy"] < atributos["autorizacion.vence"] # se comparan fechas
 }
 
@@ -126,7 +125,7 @@ cumplidas contains "C9" if {
 # ---------------------------------------------------------------------------
 cumplidas contains "C10" if {
 	aprobador_id := atributos["cambio.aprobador_id"] # Solicitud de cambio (la hace PA y la aprueba DG) 
-	aprobador_id != input.sujeto.id # en este caso el sujeto es quien aprueba
+	aprobador_id != input.sujeto.id # en este caso el sujeto es quien solicitó el cambio (en DC)
 	atributos["cambio.aprobador_rol"] == "DIRECCION_GENERAL"
 }
 
@@ -137,6 +136,6 @@ cumplidas contains "C10" if {
 # El tecnico enmienda su propia medición, y solo puede solicitar enmiendas después de que el periodo cerró
 # ---------------------------------------------------------------------------
 cumplidas contains "C11" if {
-	atributos["medicion.autor"] == input.sujeto.id # el sujeto aquí es quien solicita la enmienda o sea el que medió
+	atributos["medicion.autor_id"] == input.sujeto.id # el sujeto aquí es quien solicita la enmienda, o sea el que medió
 	atributos["periodo.estado"] == "CERRADO"
 }

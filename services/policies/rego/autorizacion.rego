@@ -1,22 +1,6 @@
-# Politicas de autorizacion de Verdeazul. Punto de decision (PDP).
-#
-# La matriz de control de acceso de la Parte 1 vive aqui como DATOS, no como 84
-# reglas sueltas. La razon es de seguridad, no de estilo: una regla por celda
-# son 84 bloques donde un rol mal escrito concede un permiso que nadie pidio, y
-# la unica red son las pruebas. Con la matriz como tabla hay un solo camino
-# para conceder, y lo que no esta en la tabla no tiene por donde entrar.
-#
-# Las condiciones C1 a C11 si son reglas explicitas, en condiciones.rego: ahi
-# esta la seguridad de verdad y ahi conviene que se lea linea por linea.
-#
-# Fuente: contracts/matriz.md. Si esta tabla y ese documento se contradicen, el
-# documento manda. tests/matriz/test_paridad.py compara esta tabla contra la
-# transcripcion independiente de tests/matriz/conftest.py, de modo que las dos
-# transcripciones se vigilan entre si.
-
 package verdeazul.autorizacion
 
-import data.verdeazul.condiciones
+import data.verdeazul.condiciones # se trae las condiciones de condiciones.rego
 import rego.v1
 
 # Identifica el conjunto de reglas que decidio. Va al evento de bitacora, para
@@ -170,7 +154,7 @@ matriz := {
 default permitir := false
 
 # Lista de condiciones que esa celda de la matriz exige, ejm: matriz["TECNICO_CAMPO"]["O1"]["L"] -> ["C1"]
-# Si la celda no existe en la matriz esta regla queda INDEFINIDA, se deniega por omision.
+# Si la celda buscada (condición), rol u objeto no existe en la matriz, exigidas = indefinido (se deniega por omision)
 exigidas := matriz[input.sujeto.rol][input.objeto.tipo][input.operacion]
 
 # Devuelve True, si exigidas == [] o si exigidas == ["C1", "C2"] y estan en condiciones.cumplidas -> True, de lo conrario False 
@@ -194,7 +178,6 @@ condicion := condicion_aux if {
 	# sort convierte el conjunto en arreglo ordenado, y luego se toma la primera para que el mensaje de denegacion sea consistente
 	condicion_aux := sort(fallidas)[0] 
 } else := null
-
 
 
 # El motivo va a la bitacora, solo puede salir un valor
