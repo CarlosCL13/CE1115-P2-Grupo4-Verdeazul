@@ -1,12 +1,3 @@
-"""La matriz de control de acceso como datos.
-
-Transcripcion de contracts/matriz.md. Es la fuente de la que salen las pruebas
-y, al final, la tabla de cobertura del informe (§5.1, punto 6).
-
-Si esta tabla y contracts/matriz.md se contradicen, una de las dos esta mal y
-hay que arreglarla antes de seguir.
-"""
-
 import pytest
 
 # (rol, objeto) -> {operacion: condicion o None}
@@ -119,13 +110,11 @@ MATRIZ: dict[tuple[str, str], dict[str, str | None]] = {
 
 OPERACIONES = ("L", "C", "M", "E", "A", "D", "Ab", "Cr", "Em", "An", "X")
 
-
 def celdas_concedidas():
     """Cada (rol, objeto, operacion, condicion) que la matriz concede."""
     for (rol, objeto), permisos in MATRIZ.items():
         for operacion, condicion in permisos.items():
             yield rol, objeto, operacion, condicion
-
 
 def celdas_denegadas():
     """Cada combinacion que la matriz NO concede. Tienen que negarse siempre."""
@@ -133,7 +122,6 @@ def celdas_denegadas():
         for operacion in OPERACIONES:
             if operacion not in permisos:
                 yield rol, objeto, operacion
-
 
 @pytest.fixture(scope="session")
 def matriz():

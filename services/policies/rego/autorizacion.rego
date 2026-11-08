@@ -167,6 +167,7 @@ permitir if {
 # El conjunto fallidas contiene cada condicion que la celda exigia y el sujeto no cumplió 
 # Es una recopilacion de condiciones que no se cumplieron
 fallidas contains condicion if {
+	# si exigidas es indefinido, entonces no se puede recorrer y no se agregan condiciones a fallidas
 	some condicion in exigidas # alguna condicion en exigidas (recorre la lista)
 	# Si condición no está en condiciones.cumplidas, entonces se agrega a fallidas
 	not condicion in condiciones.cumplidas 
