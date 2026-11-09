@@ -68,10 +68,30 @@ def _preparar(conexion: psycopg.Connection) -> None:
 
 
 def _grupo(url: str) -> ConnectionPool:
+    """Arma el grupo contando con que los dos extremos se duermen.
+
+    Cloud Run escala a cero y Neon suspende el computo a los cinco minutos,
+    asi que una conexion guardada entre peticiones casi siempre esta muerta
+    cuando vuelve a hacer falta. Tres ajustes evitan que eso llegue al usuario:
+
+    min_size=0      no guarda ninguna conexion abierta sin usar, que es justo
+                    la que Neon iba a matar. Tambien hace que el servicio
+                    arranque aunque la base este dormida.
+    max_idle        cierra la conexion antes de que Neon la cierre por su
+                    cuenta, para que el cierre lo decidamos nosotros.
+    check           comprueba la conexion antes de entregarla. Si esta muerta,
+                    la descarta y abre otra en vez de fallar la peticion.
+
+    El check cuesta un viaje de ida y vuelta por peticion. Vale la pena: sin
+    el, la primera visita despues de un rato de silencio devuelve 503, y la
+    demostracion del 19 de noviembre empieza justo despues de un silencio.
+    """
     return ConnectionPool(
         conninfo=url,
         min_size=config.CONEXIONES_MIN,
         max_size=config.CONEXIONES_MAX,
+        max_idle=config.SEGUNDOS_SIN_USO,
+        check=ConnectionPool.check_connection,
         kwargs={
             # Windows no expone un almacen de autoridades que OpenSSL
             # encuentre solo, asi que sslrootcert=system no sirve ahi.

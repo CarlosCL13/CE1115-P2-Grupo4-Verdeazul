@@ -1,0 +1,165 @@
+# Despliegue a Cloud Run.
+#
+# Separado del CI a proposito: ci.yml corre en cada pull request de cualquiera
+# y no toca la nube. Este solo corre sobre develop y es el unico que despliega.
+#
+# No hay ninguna llave en el repositorio ni en los secretos de GitHub. GitHub
+# firma un token que dice que repositorio y que workflow lo pide, Google lo
+# verifica contra la condicion del proveedor y devuelve un permiso temporal.
+# Una llave de cuenta de servicio en un JSON seria permanente, y si se filtra
+# entra quien la tenga hasta que alguien la rote. §7.1 del enunciado quita los
+# 12 puntos de secretos por una credencial versionada.
+
+name: Desplegar
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - develop
+    paths:
+      - "services/**"
+      - ".github/workflows/desplegar.yml"
+
+permissions:
+  contents: read
+  # Para pedirle a GitHub el token firmado. Sin esto, la autenticacion falla
+  # con un mensaje sobre el OIDC que no explica nada.
+  id-token: write
+
+env:
+  PROYECTO: verdeazul-g4
+  REGION: us-east4
+  REPOSITORIO: verdeazul
+
+  # Ni el id del proyecto ni esta ruta son secretos. No sirven sin un token
+  # firmado por GitHub que ademas venga de este repositorio, que es lo que
+  # comprueba la condicion del proveedor.
+  PROVEEDOR: projects/741318603630/locations/global/workloadIdentityPools/github/providers/github
+  CUENTA: ci-despliegue@verdeazul-g4.iam.gserviceaccount.com
+
+  # Con la que corre el backend ya desplegado. No es la misma que despliega:
+  # esta solo puede leer tres secretos. Sin ella, Cloud Run usaria la cuenta
+  # por omision de Compute, que trae permisos de Editor sobre todo el proyecto.
+  CUENTA_API: verdeazul-api@verdeazul-g4.iam.gserviceaccount.com
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Backend y motor de politicas, en un solo servicio con dos contenedores
+  # ---------------------------------------------------------------------------
+  # Comparten red, asi que el motor sigue escuchando en 127.0.0.1:8181 igual
+  # que en docker compose y no hay que tocar una linea de codigo.
+  #
+  # Cerrado a internet, sin --allow-unauthenticated: §1 del enunciado dice que
+  # el sistema se abre por una sola direccion publica, que es la del borde.
+  # Eso es la frontera F2 de la Parte 1.
+  api:
+    name: Backend y motor de politicas
+    runs-on: ubuntu-latest
+    outputs:
+      url: ${{ steps.desplegar.outputs.url }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Autenticarse sin llave
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.PROVEEDOR }}
+          service_account: ${{ env.CUENTA }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Dejar que docker empuje al registro
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+
+      - name: Construir y publicar las dos imagenes
+        run: |
+          BASE=${{ env.REGION }}-docker.pkg.dev/${{ env.PROYECTO }}/${{ env.REPOSITORIO }}
+          IMAGEN_API=$BASE/api:${GITHUB_SHA::7}
+          IMAGEN_POL=$BASE/policies:${GITHUB_SHA::7}
+          docker build -t "$IMAGEN_API" services/api
+          docker build -t "$IMAGEN_POL" services/policies
+          docker push "$IMAGEN_API"
+          docker push "$IMAGEN_POL"
+          echo "IMAGEN_API=$IMAGEN_API" >> "$GITHUB_ENV"
+          echo "IMAGEN_POL=$IMAGEN_POL" >> "$GITHUB_ENV"
+
+      # Los secretos se inyectan como variables de entorno, que es lo que pide
+      # §3.1. config.py los lee igual que del .env en local, sin un if.
+      - name: Desplegar
+        id: desplegar
+        run: |
+          gcloud run deploy verdeazul-api \
+            --region=${{ env.REGION }} \
+            --no-allow-unauthenticated \
+            --service-account=${{ env.CUENTA_API }} \
+            --container=api \
+              --image="$IMAGEN_API" \
+              --port=8080 \
+              --memory=512Mi \
+              --set-env-vars=APP_VERSION=${GITHUB_SHA::7} \
+              --set-secrets=VERDEAZUL_DB_URL=verdeazul-db-url:latest,VERDEAZUL_BITACORA_LECTURA_URL=verdeazul-bitacora-lectura-url:latest,LLAVE_BUSQUEDA_CEDULA=llave-busqueda-cedula:latest \
+            --container=policies \
+              --image="$IMAGEN_POL" \
+              --memory=256Mi
+          URL=$(gcloud run services describe verdeazul-api --region=${{ env.REGION }} --format="value(status.url)")
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+          echo "### Backend (cerrado a internet)" >> "$GITHUB_STEP_SUMMARY"
+          echo "$URL" >> "$GITHUB_STEP_SUMMARY"
+
+      # No se puede llamar sin credencial, asi que la comprobacion es que la
+      # revision quedo sirviendo. Que levante ya significa que Secret Manager
+      # entrego las cadenas: config.py revienta al importarse si falta una.
+      - name: Comprobar que la revision quedo sirviendo
+        run: |
+          gcloud run services describe verdeazul-api --region=${{ env.REGION }} \
+            --format="table(status.conditions[0].type, status.conditions[0].status, status.latestReadyRevisionName)"
+
+  # ---------------------------------------------------------------------------
+  # Servicio de borde, el unico abierto a internet
+  # ---------------------------------------------------------------------------
+  edge:
+    name: Servicio de borde
+    runs-on: ubuntu-latest
+    needs: api
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Autenticarse sin llave
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.PROVEEDOR }}
+          service_account: ${{ env.CUENTA }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Dejar que docker empuje al registro
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+
+      # La etiqueta es el commit, nunca latest. §7.1 quita la mitad del
+      # criterio de contenedores si las imagenes solo se publican como latest,
+      # y con el commit "que version esta corriendo" tiene una sola respuesta.
+      - name: Construir y publicar la imagen
+        run: |
+          IMAGEN=${{ env.REGION }}-docker.pkg.dev/${{ env.PROYECTO }}/${{ env.REPOSITORIO }}/edge:${GITHUB_SHA::7}
+          docker build -t "$IMAGEN" services/edge
+          docker push "$IMAGEN"
+          echo "IMAGEN=$IMAGEN" >> "$GITHUB_ENV"
+
+      # Sin --port: Cloud Run inyecta PORT y el Dockerfile lo respeta.
+      # API_URL apunta al backend, que todavia no se llama desde aqui pero
+      # queda listo para cuando el borde empiece a pedirle datos.
+      - name: Desplegar en Cloud Run
+        run: |
+          gcloud run deploy verdeazul-edge \
+            --image="$IMAGEN" \
+            --region=${{ env.REGION }} \
+            --allow-unauthenticated \
+            --set-env-vars=APP_VERSION=${GITHUB_SHA::7},API_URL=${{ needs.api.outputs.url }}
+
+      - name: La direccion publica
+        run: |
+          URL=$(gcloud run services describe verdeazul-edge --region=${{ env.REGION }} --format="value(status.url)")
+          echo "### Desplegado" >> "$GITHUB_STEP_SUMMARY"
+          echo "$URL" >> "$GITHUB_STEP_SUMMARY"
+          echo "$URL"
