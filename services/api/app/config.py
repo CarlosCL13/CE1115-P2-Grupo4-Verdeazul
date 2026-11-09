@@ -11,9 +11,6 @@ Manager y no hay .env. El mismo codigo sirve en los dos lados.
 import os
 import pathlib
 
-RAIZ = pathlib.Path(__file__).resolve().parents[3]
-
-
 class FaltaConfiguracion(RuntimeError):
     """
     Falta una variable, o tiene un valor que no sirve.
@@ -43,10 +40,21 @@ class Secreto:
 
 def _cargar_env() -> None:
     """
-    Lee el .env si existe. En Cloud Run no existe.
+    Lee el .env si lo encuentra subiendo desde este archivo.
+
+    Se busca hacia arriba en vez de contar carpetas porque la profundidad no
+    es la misma en los dos lados: en el repo este archivo vive en
+    services/api/app/ y en el contenedor en /app/app/.
+
+    Si no aparece, no pasa nada: en el contenedor las variables las pasa
+    docker compose, y en Cloud Run las inyecta Secret Manager.
     """
-    archivo = RAIZ / ".env"
-    if not archivo.exists():
+    archivo = None
+    for carpeta in pathlib.Path(__file__).resolve().parents:
+        if (carpeta / ".env").is_file():
+            archivo = carpeta / ".env"
+            break
+    if archivo is None:
         return
     for linea in archivo.read_text(encoding="utf-8").splitlines():
         linea = linea.strip()
