@@ -152,8 +152,15 @@ TIEMPO_LIMITE_CONSULTA_MS = _entero("TIEMPO_LIMITE_CONSULTA_MS", 10_000)
 
 # Pequeno a proposito: el plan Free de Neon no da conexiones infinitas y Cloud
 # Run puede levantar varias instancias.
-CONEXIONES_MIN = _entero("CONEXIONES_MIN", 1)
+# Cero a proposito: guardar una conexion abierta entre peticiones no sirve
+# cuando el otro extremo se duerme. Neon suspende el computo a los cinco
+# minutos y la mata, y la siguiente peticion se encuentra una conexion muerta.
+CONEXIONES_MIN = _entero("CONEXIONES_MIN", 0)
 CONEXIONES_MAX = _entero("CONEXIONES_MAX", 4)
+
+# Cuanto puede quedarse una conexion sin usar antes de cerrarla nosotros.
+# Por debajo de los cinco minutos de Neon, para que el cierre sea ordenado.
+SEGUNDOS_SIN_USO = _entero("SEGUNDOS_SIN_USO", 120)
 
 
 # --- Datos personales -------------------------------------------------------
@@ -188,6 +195,7 @@ def resumen() -> dict:
         "entorno": ENTORNO,
         "tiempo_limite_consulta_ms": TIEMPO_LIMITE_CONSULTA_MS,
         "conexiones": "%d-%d" % (CONEXIONES_MIN, CONEXIONES_MAX),
+        "segundos_sin_uso": SEGUNDOS_SIN_USO,
         "base_configurada": BD_URL is not None,
         "sesion_horas": SESION_HORAS,
         "argon2": ARGON2,
