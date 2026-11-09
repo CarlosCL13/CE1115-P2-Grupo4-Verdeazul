@@ -84,19 +84,36 @@ def _entero(nombre: str, por_omision: int) -> int:
                                  % (nombre, bruto)) from None
 
 
-def _conexion(nombre: str) -> Secreto:
+def _secreto(nombre: str) -> Secreto | None:
+    """Un secreto: obligatorio en la nube, opcional en local.
+
+    Un secreto ausente no puede llegar a produccion fingiendo que todo esta
+    bien. Pero en local el ciclo de trabajo sobre las politicas levanta api y
+    policies sin base de datos, y exigirlo ahi rompe ese ciclo.
     """
-    Una cadena de conexion, que ademas tiene que exigir verify-full.
+    valor = os.environ.get(nombre)
+    if valor:
+        return Secreto(valor)
+    if ENTORNO == "nube":
+        raise FaltaConfiguracion(
+            "Falta %s. En Cloud Run se inyecta desde Secret Manager." % nombre)
+    return None
+
+
+def _conexion(nombre: str) -> Secreto | None:
+    """Una cadena de conexion, que ademas tiene que exigir verify-full.
 
     Neon la da terminada en sslmode=require, que cifra pero no verifica contra
     quien se habla. Si alguien la pega tal cual, que se note ahora.
     """
-    valor = _texto(nombre)
-    if "sslmode=verify-full" not in valor:
+    secreto = _secreto(nombre)
+    if secreto is None:
+        return None
+    if "sslmode=verify-full" not in secreto.revelar():
         raise FaltaConfiguracion(
             "%s no pide verify-full. Cambia el final de la cadena por "
             "?sslmode=verify-full" % nombre)
-    return Secreto(valor)
+    return secreto
 
 
 _cargar_env()
@@ -135,7 +152,7 @@ CONEXIONES_MAX = _entero("CONEXIONES_MAX", 4)
 
 # Llave del HMAC de datos_personales.cedula_busqueda. Vive fuera de la base: si
 # estuviera dentro, un volcado entregaria las cedulas.
-LLAVE_BUSQUEDA_CEDULA = Secreto(_texto("LLAVE_BUSQUEDA_CEDULA"))
+LLAVE_BUSQUEDA_CEDULA = _secreto("LLAVE_BUSQUEDA_CEDULA")
 
 
 # --- Sesiones y contrasenas -------------------------------------------------
@@ -163,6 +180,7 @@ def resumen() -> dict:
         "entorno": ENTORNO,
         "tiempo_limite_consulta_ms": TIEMPO_LIMITE_CONSULTA_MS,
         "conexiones": "%d-%d" % (CONEXIONES_MIN, CONEXIONES_MAX),
+        "base_configurada": BD_URL is not None,
         "sesion_horas": SESION_HORAS,
         "argon2": ARGON2,
     }

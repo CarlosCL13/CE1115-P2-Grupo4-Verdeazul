@@ -32,6 +32,9 @@ node_modules/
 dist/
 .angular/
 
+# Open Policy Agent
+opa.exe
+
 # Entorno local
 .DS_Store
 Thumbs.db

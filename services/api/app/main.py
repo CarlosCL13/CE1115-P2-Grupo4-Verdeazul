@@ -3,8 +3,8 @@
 Aqui se registran los modulos de cada frente. Cada uno expone un router y se
 agrega con una sola linea, para que un conflicto de git sea de una linea.
 
-Por ahora solo esta /salud, que comprueba de punta a punta que la
-configuracion llego y que Neon responde por TLS.
+Por ahora solo esta /salud, que reporta por separado el motor de politicas y
+la base de datos.
 """
 
 import contextlib
@@ -13,6 +13,7 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
 from app import bd, config
+from app.authz.Servicio_opa import motor_disponible
 
 
 @contextlib.asynccontextmanager
@@ -20,8 +21,11 @@ async def ciclo(app: FastAPI):
     """Abre las conexiones al levantar y las cierra al apagar.
 
     Abrirlas aqui y no en la primera peticion hace que un problema de
-    credenciales se vea cuando el servicio arranca, no cuando entra el primer
-    usuario.
+    credenciales se vea cuando el servicio arranca.
+
+    En local no corta el arranque si no hay base: el ciclo de trabajo sobre
+    las politicas levanta api y policies sin base de datos, y /salud lo
+    reporta como sin configurar.
     """
     bd.arrancar()
     try:
@@ -45,16 +49,47 @@ app = FastAPI(
 # app.include_router(router_cuentas)
 
 
-@app.get("/salud")
-def salud() -> JSONResponse:
-    """Dice si el servicio responde y si la base contesta.
+def _estado_del_motor() -> dict[str, object]:
+    """Si el contenedor adjunto de politicas responde.
+
+    Es la comprobacion que demuestra que los dos contenedores se estan
+    hablando. Si dice "no responde", `puede(...)` esta denegando todo por la
+    regla 2 del contrato 02, y conviene saberlo aqui antes de perder una hora
+    pensando que la matriz esta mal transcrita.
+    """
+    return {"estado": "ok" if motor_disponible() else "no responde"}
+
+
+def _estado_de_la_base() -> dict[str, object]:
+    """Si Neon responde.
 
     Sin detalles del error al cliente: un mensaje de base de datos revela
     estructura interna. El detalle va a los registros.
     """
-    viva = bd.esta_viva()
+    if config.BD_URL is None:
+        return {"estado": "sin configurar"}
+    return {"estado": "ok" if bd.esta_viva() else "inaccesible"}
+
+
+@app.get("/salud")
+def salud() -> JSONResponse:
+    """Comprueba el servicio, el motor de politicas y la base de datos.
+
+    Reporta los dos componentes por separado y siempre los dos, aunque uno
+    falle. Antes, una base sin configurar cortaba la respuesta antes de llegar
+    a mirar el motor, y en desarrollo local, que es justo donde no hay base de
+    datos, eso dejaba ciego lo unico que se queria ver.
+    """
+    motor = _estado_del_motor()
+    base = _estado_de_la_base()
+    todo_bien = motor["estado"] == "ok" and base["estado"] == "ok"
+
     return JSONResponse(
-        status_code=200 if viva else 503,
-        content={"estado": "ok" if viva else "base de datos inaccesible",
-                 **config.resumen()},
+        status_code=200 if todo_bien else 503,
+        content={
+            "estado": "ok" if todo_bien else "degradado",
+            "motor_de_politicas": motor,
+            "base_de_datos": base,
+            **config.resumen(),
+        },
     )

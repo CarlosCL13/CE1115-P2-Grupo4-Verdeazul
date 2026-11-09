@@ -87,12 +87,17 @@ def _grupo(url: str) -> ConnectionPool:
 def arrancar() -> None:
     """
     Abre los grupos de conexiones. Lo llama main.py al levantar.
+
+    Sin cadena de conexion no abre nada y deja que el servicio levante igual.
+    Eso solo pasa en local: config.py ya revienta en la nube si falta. Llegar
+    aqui sin cadena significa que alguien trabaja sobre las politicas sin base
+    de datos, y /salud lo reporta como sin configurar.
     """
     global _principal, _bitacora
-    if _principal is None:
+    if _principal is None and config.BD_URL is not None:
         _principal = _grupo(config.BD_URL.revelar())
         _principal.open(wait=True, timeout=15)
-    if _bitacora is None:
+    if _bitacora is None and config.BITACORA_LECTURA_URL is not None:
         _bitacora = _grupo(config.BITACORA_LECTURA_URL.revelar())
         _bitacora.open(wait=True, timeout=15)
 
@@ -118,7 +123,9 @@ def transaccion():
     lleve el rastro.
     """
     if _principal is None:
-        raise SinTransaccion("Llama a bd.arrancar() antes de usar la base.")
+        raise SinTransaccion(
+            "No hay conexion a la base. Falta la cadena en el .env, o no "
+            "se llamo a bd.arrancar().")
 
     salvados: list[dict] = []
 
@@ -192,7 +199,9 @@ def lectura_bitacora():
     bitacora es del transmisor, no de la API.
     """
     if _bitacora is None:
-        raise SinTransaccion("Llama a bd.arrancar() antes de usar la base.")
+        raise SinTransaccion(
+            "No hay conexion a la base. Falta la cadena en el .env, o no "
+            "se llamo a bd.arrancar().")
     with _bitacora.connection() as conexion:
         conexion.autocommit = True
         with conexion.cursor() as cur:

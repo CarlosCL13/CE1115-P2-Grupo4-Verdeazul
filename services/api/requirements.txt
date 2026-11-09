@@ -4,6 +4,11 @@
 fastapi==0.115.6
 uvicorn[standard]==0.34.0
 
+# Habla con el motor de politicas en el contenedor adjunto. Se eligio sobre
+# urllib porque mantiene la conexion abierta: hay varias autorizaciones por
+# peticion del usuario y un handshake TCP por cada una se nota.
+httpx==0.28.1
+
 psycopg[binary]==3.2.3
 psycopg_pool==3.2.4
 
