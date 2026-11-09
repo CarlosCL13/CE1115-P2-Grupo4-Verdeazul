@@ -1,6 +1,6 @@
 
 # Imagen oficial de OPA en DockerHub
-FROM openpolicyagent/opa:1.4.2-static
+FROM openpolicyagent/opa:1.22.2-static
 
 # Se copia las políticas de OPA al contenedor (se ignoran los tests)
 COPY rego /politicas
