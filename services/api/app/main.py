@@ -1,15 +1,34 @@
 """Backend de la plataforma Verdeazul. Punto de aplicacion (PEP).
 
-Por ahora solo expone /salud, que sirve para comprobar de punta a punta que
-Secret Manager entrega la cadena de conexion, que Cloud Run la recibe como
-variable de entorno y que Neon responde por TLS.
+Aqui se registran los modulos de cada frente. Cada uno expone un router y se
+agrega con una sola linea, para que un conflicto de git sea de una linea.
+
+Por ahora solo esta /salud, que comprueba de punta a punta que la
+configuracion llego y que Neon responde por TLS.
 """
 
-import os
+import contextlib
 
-import psycopg
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
+
+from app import bd, config
+
+
+@contextlib.asynccontextmanager
+async def ciclo(app: FastAPI):
+    """Abre las conexiones al levantar y las cierra al apagar.
+
+    Abrirlas aqui y no en la primera peticion hace que un problema de
+    credenciales se vea cuando el servicio arranca, no cuando entra el primer
+    usuario.
+    """
+    bd.arrancar()
+    try:
+        yield
+    finally:
+        bd.cerrar()
+
 
 app = FastAPI(
     title="Verdeazul Carbono",
@@ -17,41 +36,25 @@ app = FastAPI(
     docs_url=None,
     redoc_url=None,
     openapi_url=None,
+    lifespan=ciclo,
 )
 
-# La version de la imagen la inyecta Cloud Run al desplegar. Sirve para
-# responder "que version esta corriendo" sin entrar a la consola.
-VERSION = os.getenv("APP_VERSION", "dev")
+# Aqui va una linea por modulo, a medida que existan:
+#
+# from app.cuentas import router as router_cuentas
+# app.include_router(router_cuentas)
 
 
 @app.get("/salud")
 def salud() -> JSONResponse:
-    """Comprueba que el servicio responde y que la base de datos contesta."""
-    url = os.getenv("DATABASE_URL")
-    if not url:
-        return JSONResponse(
-            status_code=503,
-            content={"estado": "sin configurar", "version": VERSION},
-        )
+    """Dice si el servicio responde y si la base contesta.
 
-    try:
-        with psycopg.connect(url, connect_timeout=10) as conexion:
-            with conexion.cursor() as cursor:
-                cursor.execute("SELECT version(), now()")
-                version_bd, ahora = cursor.fetchone()
-    except Exception:
-        # Sin detalles al cliente: un mensaje de error de base de datos
-        # revela estructura interna. El detalle va a la bitacora.
-        return JSONResponse(
-            status_code=503,
-            content={"estado": "base de datos inaccesible", "version": VERSION},
-        )
-
+    Sin detalles del error al cliente: un mensaje de base de datos revela
+    estructura interna. El detalle va a los registros.
+    """
+    viva = bd.esta_viva()
     return JSONResponse(
-        content={
-            "estado": "ok",
-            "version": VERSION,
-            "base_de_datos": version_bd.split(" on ")[0],
-            "hora_servidor": ahora.isoformat(),
-        }
+        status_code=200 if viva else 503,
+        content={"estado": "ok" if viva else "base de datos inaccesible",
+                 **config.resumen()},
     )

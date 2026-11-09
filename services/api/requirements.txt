@@ -1,6 +1,14 @@
-# Pendiente: congelar las versiones exactas con `pip freeze` despues de la
-# primera construccion que funcione. P1 se comprometio a dependencias fijadas
-# (E4, ficha de lenguaje), y Dependabot avisa mejor sobre versiones fijas.
-fastapi
-uvicorn[standard]
-psycopg[binary]
+# Versiones exactas. P1 se comprometio a dependencias fijadas (E4, ficha de
+# lenguaje), y Dependabot avisa mejor sobre versiones fijas que sobre rangos.
+
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+
+psycopg[binary]==3.2.3
+psycopg_pool==3.2.4
+
+# Las autoridades certificadoras de Mozilla. psycopg[binary] trae libpq 14, que
+# no entiende sslrootcert=system (eso aparecio en libpq 16), y Windows no
+# expone un almacen que OpenSSL encuentre solo. Sin esto, verify-full falla y
+# la tentacion es bajar a require, que cifra pero no verifica al servidor.
+certifi==2026.10.23

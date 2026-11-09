@@ -11,44 +11,122 @@ comprometa la aplicación no alcanza el rastro de auditoría.
 | [`bitacora/`](bitacora/) | El esquema de `verdeazul-bitacora` | el dueño de ese proyecto |
 | [`migrar.py`](migrar.py) | El que las aplica y lleva la cuenta | |
 
-## Cómo arrancar
+## Cómo armar tu `.env`
 
-Las bases ya están creadas y los roles ya existen. Lo que necesitás es el
-`.env`, que **te lo pasa Carlos por fuera del chat del grupo**, porque lleva
-las cinco contraseñas.
+El `.env` es el archivo con las cadenas de conexión y las contraseñas. Está en
+`.gitignore` y nunca entra al repositorio, así que cada quien tiene el suyo en
+su máquina.
+
+Hay dos caminos. Si solo vas a **usar** la base, pedile el `.env` a Carlos y
+saltá al paso 5. Si vas a **escribir migraciones**, conviene tener la tuya para
+no romperle el esquema a los demás, y entonces seguí los cinco pasos.
+
+### 1. Creá dos proyectos en Neon
+
+En [neon.tech](https://neon.tech), PostgreSQL 18, región AWS us-east-1. Uno
+para la base principal y otro para la bitácora, porque viven separadas a
+propósito.
+
+En el **principal**, abrí el SQL Editor y corré:
+
+```sql
+CREATE EXTENSION IF NOT EXISTS postgis;
+```
+
+En el de bitácora no hace falta: esa base guarda texto.
+
+### 2. Instalá lo que necesita el runner
 
 ```
 .venv/Scripts/python.exe -m pip install -r db/requirements.txt
-.venv/Scripts/python.exe db/migrar.py estado
 ```
 
-Si `estado` lista las migraciones, ya está. Para aplicar las que falten:
+### 3. Generá cinco contraseñas
+
+```
+.venv/Scripts/python.exe -c "import secrets; [print(secrets.token_urlsafe(24)) for _ in range(5)]"
+```
+
+Salen en formato seguro para URL, así que no hay que escapar nada al pegarlas
+en una cadena de conexión.
+
+### 4. Llená el `.env`
+
+```
+cp .env.example .env
+```
+
+Por ahora **solo seis líneas**. Las dos cadenas de dueño salen de la consola de
+Neon, en Dashboard → Connect, con el rol `neondb_owner`:
+
+```
+VERDEAZUL_OWNER_URL=postgresql://neondb_owner:...@ep-xxx.../neondb?sslmode=verify-full
+VERDEAZUL_BITACORA_OWNER_URL=postgresql://neondb_owner:...@ep-yyy.../neondb?sslmode=verify-full
+
+CLAVE_APP_MIGRATE=la-primera-que-generaste
+CLAVE_APP_RW=la-segunda
+CLAVE_OUTBOX_RW=la-tercera
+CLAVE_LOG_WRITER=la-cuarta
+CLAVE_LOG_READER=la-quinta
+```
+
+Neon da la cadena terminada en `?sslmode=require`. Cambiá ese final por
+`?sslmode=verify-full`, que es lo que prometió la Parte 1. No agregues
+`sslrootcert`: esa ruta la pone el código con `certifi`, porque depende de la
+máquina.
+
+Creá los roles y ponerles contraseña:
+
+```
+.venv/Scripts/python.exe db/migrar.py roles
+.venv/Scripts/python.exe db/migrar.py bitacora
+.venv/Scripts/python.exe db/migrar.py claves
+```
+
+Ahora completá las **cinco cadenas que faltan**, tomando la cadena de dueño del
+proyecto que corresponda y cambiándole usuario y contraseña. Ojo con el host:
+`log_writer` y `log_reader` viven en el proyecto de bitácora, que tiene uno
+distinto.
+
+```
+VERDEAZUL_MIGRATE_URL=postgresql://app_migrate:...@ep-xxx.../neondb?sslmode=verify-full
+VERDEAZUL_DB_URL=postgresql://app_rw:...@ep-xxx.../neondb?sslmode=verify-full
+VERDEAZUL_OUTBOX_URL=postgresql://outbox_rw:...@ep-xxx.../neondb?sslmode=verify-full
+VERDEAZUL_BITACORA_URL=postgresql://log_writer:...@ep-yyy.../neondb?sslmode=verify-full
+VERDEAZUL_BITACORA_LECTURA_URL=postgresql://log_reader:...@ep-yyy.../neondb?sslmode=verify-full
+```
+
+Falta una última, la llave con la que se busca por cédula sin descifrarla:
+
+```
+.venv/Scripts/python.exe -c "import secrets; print(secrets.token_urlsafe(32))"
+```
+
+```
+LLAVE_BUSQUEDA_CEDULA=lo-que-salio
+```
+
+### 5. Aplicá el esquema y comprobá
 
 ```
 .venv/Scripts/python.exe db/migrar.py app
+.venv/Scripts/python.exe db/migrar.py estado
 ```
+
+`estado` lista qué migraciones están aplicadas y cuáles faltan. Si las diez
+aparecen con fecha, ya está.
 
 Un archivo ya aplicado nunca se edita: `migrar.py` guarda su huella y se niega
 a seguir si cambió. Si algo está mal, se corrige con una migración nueva.
 
-### Si preferís tu propia base
+### Si algo falla
 
-Opcional, y sirve si vas a escribir migraciones y no querés romperle el
-esquema a los demás. Creás dos proyectos tuyos en Neon, corrés
-`CREATE EXTENSION postgis` en el principal, generás cinco contraseñas con
-`secrets.token_urlsafe(24)`, llenás tu `.env` a partir de `.env.example`, y
-después:
+`Falta VERDEAZUL_X en el .env` dice exactamente qué variable no está.
 
-```
-python db/migrar.py roles      # crea app_migrate, app_rw, outbox_rw
-python db/migrar.py bitacora   # crea log_writer, log_reader y la tabla eventos
-python db/migrar.py claves     # les pone contraseña
-python db/migrar.py app        # el esquema
-```
+`no pide verify-full` significa que dejaste el `?sslmode=require` que da Neon.
 
-Las cadenas terminan en `?sslmode=verify-full`. No agregues `sslrootcert`: la
-ruta del almacén de certificados la pone el código con `certifi`, porque
-depende de la máquina.
+`password authentication failed` casi siempre es haber puesto la contraseña de
+un rol en la cadena de otro, o haber usado el host del proyecto equivocado.
 
 ## Los cinco roles
 
