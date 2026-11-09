@@ -1,0 +1,29 @@
+
+services:
+  # Contenedor de la API
+  api:
+    build: ./services/api # donde se encuentra el archivo de config de la imagen
+    environment:
+      PORT: 8080
+      APP_VERSION: local
+    env_file:
+      - path: ./services/api/.env # carga todas las variables del archivo (variables de entorno)
+        required: false # si no existe el archivo .env no se detiene la construcción del contenedor
+    ports:
+      - "127.0.0.1:8080:8080" # esta es la dirección de la API que se expone al host (para pruebas)
+    volumes:
+      # Solo para desarrollo. La imagen de producción copia únicamente `app`,
+      # así que las pruebas no viajan en ella. Se montan acá porque el puerto
+      # 8181 del motor no es alcanzable desde el host (se ata a 127.0.0.1
+      # dentro del espacio de red compartido), así que la única forma de probar
+      # el cliente contra el contenedor real es correr pytest adentro.
+      #
+      # De solo lectura: una prueba no tiene por qué poder escribir el repo.
+      - ./tests:/app/tests:ro
+
+  # Contenedor de las políticas
+  policies:
+    build: ./services/policies # donde se encuentra el archivo de config de la imagen
+    network_mode: "service:api" # quiere decir que comparte la red con el contenedor de la API, por lo que no necesita exponer puertos
+    depends_on:
+      - api

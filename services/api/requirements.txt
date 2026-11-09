@@ -2,5 +2,9 @@
 # primera construccion que funcione. P1 se comprometio a dependencias fijadas
 # (E4, ficha de lenguaje), y Dependabot avisa mejor sobre versiones fijas.
 fastapi
+# Habla con el motor de politicas en el contenedor adjunto. Se eligio sobre
+# urllib porque mantiene la conexion abierta: hay varias autorizaciones por
+# peticion del usuario y un handshake TCP por cada una se nota.
+httpx
 uvicorn[standard]
 psycopg[binary]

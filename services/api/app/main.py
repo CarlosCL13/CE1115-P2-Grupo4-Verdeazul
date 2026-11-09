@@ -11,6 +11,8 @@ import psycopg
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
+from app.authz.Servicio_opa import motor_disponible
+
 app = FastAPI(
     title="Verdeazul Carbono",
     description="Plataforma de certificacion de captura de carbono",
@@ -24,15 +26,11 @@ app = FastAPI(
 VERSION = os.getenv("APP_VERSION", "dev")
 
 
-@app.get("/salud")
-def salud() -> JSONResponse:
-    """Comprueba que el servicio responde y que la base de datos contesta."""
+def _estado_de_la_base() -> dict[str, object]:
+    """Si Neon responde por TLS y con que version."""
     url = os.getenv("DATABASE_URL")
     if not url:
-        return JSONResponse(
-            status_code=503,
-            content={"estado": "sin configurar", "version": VERSION},
-        )
+        return {"estado": "sin configurar"}
 
     try:
         with psycopg.connect(url, connect_timeout=10) as conexion:
@@ -42,16 +40,45 @@ def salud() -> JSONResponse:
     except Exception:
         # Sin detalles al cliente: un mensaje de error de base de datos
         # revela estructura interna. El detalle va a la bitacora.
-        return JSONResponse(
-            status_code=503,
-            content={"estado": "base de datos inaccesible", "version": VERSION},
-        )
+        return {"estado": "inaccesible"}
+
+    return {
+        "estado": "ok",
+        "version": version_bd.split(" on ")[0],
+        "hora_servidor": ahora.isoformat(),
+    }
+
+
+def _estado_del_motor() -> dict[str, object]:
+    """Si el contenedor adjunto de politicas responde.
+
+    Es la comprobacion que demuestra que los dos contenedores se estan
+    hablando. Si dice "no responde", `puede(...)` esta denegando todo por la
+    regla 2 del contrato 02, y conviene saberlo aqui antes de perder una hora
+    pensando que la matriz esta mal transcrita.
+    """
+    return {"estado": "ok" if motor_disponible() else "no responde"}
+
+
+@app.get("/salud")
+def salud() -> JSONResponse:
+    """Comprueba el servicio, el motor de politicas y la base de datos.
+
+    Reporta los dos componentes por separado y siempre los dos, aunque uno
+    falle. Antes, una base sin configurar cortaba la respuesta antes de llegar
+    a mirar el motor, y en desarrollo local, que es justo donde no hay base de
+    datos, eso dejaba ciego lo unico que se queria ver.
+    """
+    motor = _estado_del_motor()
+    base = _estado_de_la_base()
+    todo_bien = motor["estado"] == "ok" and base["estado"] == "ok"
 
     return JSONResponse(
+        status_code=200 if todo_bien else 503,
         content={
-            "estado": "ok",
+            "estado": "ok" if todo_bien else "degradado",
             "version": VERSION,
-            "base_de_datos": version_bd.split(" on ")[0],
-            "hora_servidor": ahora.isoformat(),
-        }
+            "motor_de_politicas": motor,
+            "base_de_datos": base,
+        },
     )
