@@ -111,18 +111,19 @@ MATRIZ: dict[tuple[str, str], dict[str, str | None]] = {
 OPERACIONES = ("L", "C", "M", "E", "A", "D", "Ab", "Cr", "Em", "An", "X")
 
 def celdas_concedidas():
-    """Cada (rol, objeto, operacion, condicion) que la matriz concede."""
+    # Cada (rol, objeto, operacion, condicion), aquellas celdas que tienen al menos una operación
     for (rol, objeto), permisos in MATRIZ.items():
         for operacion, condicion in permisos.items():
             yield rol, objeto, operacion, condicion
 
 def celdas_denegadas():
-    """Cada combinacion que la matriz NO concede. Tienen que negarse siempre."""
+    # Aquellas celdas que no tienen ninguna operación
     for (rol, objeto), permisos in MATRIZ.items():
         for operacion in OPERACIONES:
             if operacion not in permisos:
                 yield rol, objeto, operacion
 
+# se exporta la matriz para que los tests puedan usarla
 @pytest.fixture(scope="session")
 def matriz():
     return MATRIZ

@@ -7,15 +7,16 @@ import rego.v1
 peticion(rol, objeto, operacion, atributos) := {
 	"sujeto": {"id": "u-1", "rol": rol, "zonas": ["norte"]},
 	"operacion": operacion,
-	"objeto": {"tipo": objeto, "atributos": atributos}
+	"objeto": {"tipo": objeto, "atributos": atributos},
 }
+
 # Nota: todavía hay que definir el formato de acuerdo a los nombres de la base de datos
 
 # ---------------------------------------------------------------------------
 # Las cuatro reglas que no se negocian, en este caso para la matriz aplica solo 1 y 3 (contracts/02-autorizacion.md)
 # ---------------------------------------------------------------------------
 
-# Regla 1: lo que no esta concedido en la matriz, se niega. 
+# Regla 1: lo que no esta concedido en la matriz, se niega.
 test_denegacion_por_omision if {
 	# El tercero autorizador no tiene permiso de leer O11
 	not autorizacion.permitir with input as peticion("TERCERO_AUTORIZADO", "O11", "L", {})
@@ -30,7 +31,7 @@ test_la_omision_no_se_reporta_como_condicion if {
 
 # Regla 3: ABAC quita, nunca agrega. El dueño de la finca no tiene M sobre O1, y ser el propietario no se lo da
 test_abac_no_agrega_lo_que_el_rol_no_tiene if {
-	not autorizacion.permitir with input as peticion("DUENO_FINCA", "O1", "M",{"finca.propietario_id": "u-1"})
+	not autorizacion.permitir with input as peticion("DUENO_FINCA", "O1", "M", {"finca.propietario_id": "u-1"})
 }
 
 # Un rol que no existe no cae en ninguna celda. El rol viene de la sesion y un rol corrupto no debe conceder nada
@@ -69,7 +70,6 @@ test_ningun_rol_modifica_mediciones if {
 		not autorizacion.permitir with input as peticion(rol, "O3", "M", {})
 	}
 }
-
 
 # ---------------------------------------------------------------------------
 # Permisos sin condicion que dependen solo del rol
@@ -155,7 +155,7 @@ test_verificador_no_aprueba_su_propia_medicion if {
 		{
 			"medicion.autor_id": "u-1",
 			"contexto.sujeto_midio_en_finca_periodo": false,
-		}
+		},
 	)
 }
 
@@ -166,7 +166,7 @@ test_verificador_aprueba_medicion_ajena if {
 		{
 			"medicion.autor_id": "u-otro",
 			"contexto.sujeto_midio_en_finca_periodo": false,
-		}
+		},
 	)
 }
 
@@ -178,7 +178,7 @@ test_auditor_dentro_de_la_ventana if {
 			"contexto.hoy": "2026-11-04",
 			"auditoria.inicio": "2026-11-01",
 			"auditoria.fin": "2026-11-30",
-		}
+		},
 	)
 }
 

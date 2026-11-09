@@ -10,4 +10,5 @@ docker compose exec --user root api pip install pytest
 
 # 4. Correr las pruebas
 docker compose exec api python -m pytest tests/matriz/test_motor.py -v
+docker compose exec api python -m pytest tests/matriz/test_celdas.py -v -p no:cacheprovider
 

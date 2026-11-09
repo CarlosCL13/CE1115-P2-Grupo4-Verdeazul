@@ -3,7 +3,7 @@ package verdeazul.autorizacion
 import data.verdeazul.condiciones # se trae las condiciones de condiciones.rego
 import rego.v1
 
-# Identifica el conjunto de reglas que decidio. Va al evento de bitacora, para
+# Identifica el conjunto de reglas que decidió. Va al evento de bitacora, para
 # que despues se pueda saber que politica estaba corriendo cuando se concedio o
 # se nego algo. Se sube a mano cuando la matriz cambia.
 version_politica := "matriz-p1-v1"
@@ -157,29 +157,32 @@ default permitir := false
 # Si la celda buscada (condición), rol u objeto no existe en la matriz, exigidas = indefinido (se deniega por omision)
 exigidas := matriz[input.sujeto.rol][input.objeto.tipo][input.operacion]
 
-# Devuelve True, si exigidas == [] o si exigidas == ["C1", "C2"] y estan en condiciones.cumplidas -> True, de lo conrario False 
+# Devuelve True, si exigidas == [] o si exigidas == ["C1", "C2"] y estan en condiciones.cumplidas -> True, de lo conrario False
 # Devuelve nada (indefinido) si exigidas == indefinido -> cuerpo falla y permitir cae en dafualt false
 permitir if {
 	# Para cada condición que la celda exige, esa condición está en el conjunto que el sujeto cumple
-	every condicion_celda in exigidas {condicion_celda in condiciones.cumplidas} # condiciones.cumplidas viene de condiciones.rego
+	every condicion_celda in exigidas { condicion_celda in condiciones.cumplidas } # condiciones.cumplidas viene de condiciones.rego
 }
 
-# El conjunto fallidas contiene cada condicion que la celda exigia y el sujeto no cumplió 
+# El conjunto fallidas contiene cada condicion que la celda exigia y el sujeto no cumplió
 # Es una recopilacion de condiciones que no se cumplieron
 fallidas contains condicion if {
 	# si exigidas es indefinido, entonces no se puede recorrer y no se agregan condiciones a fallidas
 	some condicion in exigidas # alguna condicion en exigidas (recorre la lista)
+
 	# Si condición no está en condiciones.cumplidas, entonces se agrega a fallidas
-	not condicion in condiciones.cumplidas 
-} # ejm: si exigidas = ["C1", "C2"] y solo C1 está en condiciones.cumplidas, entonces fallidas = ["C2"]
+	not condicion in condiciones.cumplidas
+}
+
+# ejm: si exigidas = ["C1", "C2"] y solo C1 está en condiciones.cumplidas, entonces fallidas = ["C2"]
 
 # Fallidas siempre está definidas, puede quedar vacía []
 condicion := condicion_aux if {
 	count(fallidas) > 0 # si está vació se retorna condicion = null (es decir tiene autorización)
-	# sort convierte el conjunto en arreglo ordenado, y luego se toma la primera para que el mensaje de denegacion sea consistente
-	condicion_aux := sort(fallidas)[0] 
-} else := null
 
+	# sort convierte el conjunto en arreglo ordenado, y luego se toma la primera para que el mensaje de denegacion sea consistente
+	condicion_aux := sort(fallidas)[0]
+} else := null
 
 # El motivo va a la bitacora, solo puede salir un valor
 motivo := "concedido: la matriz autoriza esta operacion a este rol" if {
@@ -189,10 +192,9 @@ motivo := "concedido: la matriz autoriza esta operacion a este rol" if {
 	permitir # si permitir es true, quiere decir que habían condiciones pero se cumplieron todas
 } else := "denegado: la operacion E (eliminar) no se concede a ningun rol de la matriz" if {
 	input.operacion == "E" # En caso de que alguien intenten eliminar algo (nadie lo puede hacer)
-} else := sprintf("denegado: la celda exige %v y no se cumple %v",[sort(exigidas), sort(fallidas)]) if {
+} else := sprintf("denegado: la celda exige %v y no se cumple %v", [sort(exigidas), sort(fallidas)]) if {
 	count(fallidas) > 0 # se deniega porque hay condiciones que no se cumplen y registran las fallidas
 } else := "denegado por omision: la matriz no concede esta operacion a este rol sobre este objeto"
-
 
 # El backend hace una consulta por HTTP de la forma:
 #   POST /v1/data/verdeazul/autorizacion/decision

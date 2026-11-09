@@ -1,4 +1,3 @@
-
 package verdeazul.condiciones
 
 import rego.v1
@@ -56,7 +55,7 @@ cumplidas contains "C4" if {
 # C5 - tres personas distintas para cerrar una enmienda (SR-03)
 # Aplica a DC (Dirección de certificación) -> O11
 #
-# Solicitante, revisor y quien cierra (DC) tienen que ser tres. La enmienda ya tiene que estar revisada, 
+# Solicitante, revisor y quien cierra (DC) tienen que ser tres. La enmienda ya tiene que estar revisada,
 # 	pues no se cierra lo que nadie revisó
 # ---------------------------------------------------------------------------
 cumplidas contains "C5" if {
@@ -69,7 +68,7 @@ cumplidas contains "C5" if {
 # C6 - emision de certificado (SR-05)
 # Aplica a VF (Verificador) -> O5
 #
-# Aquí la medición esta aprobada, quien emite no es quien midió, y ningun certificado vigente tiene 
+# Aquí la medición esta aprobada, quien emite no es quien midió, y ningun certificado vigente tiene
 #	un poligono que se traslape con el de esta medición
 #
 # El traslape llega como contexto.poligono_traslapa_certificado_vigente
@@ -85,7 +84,7 @@ cumplidas contains "C6" if {
 # C7 - ventana de auditoria (HBAC-03)
 # Aplica a AE (Auditor externo) -> O1, O2, O3, O4, O5, O11
 #
-# Fuera de la ventana el permiso no se suspende, sino que deja de existir, y por eso se evalua aqui y no 
+# Fuera de la ventana el permiso no se suspende, sino que deja de existir, y por eso se evalua aqui y no
 # 	como un estado de la cuenta del auditor
 #
 # `hoy` se manda como contexto.hoy en lugar de leerlo del reloj de OPA
@@ -124,7 +123,7 @@ cumplidas contains "C9" if {
 # Existe una aprobacion previa de la Direccion General, y quien aprobo no puede ser quien ejecuta.
 # ---------------------------------------------------------------------------
 cumplidas contains "C10" if {
-	aprobador_id := atributos["cambio.aprobador_id"] # Solicitud de cambio (la hace PA y la aprueba DG) 
+	aprobador_id := atributos["cambio.aprobador_id"] # Solicitud de cambio (la hace PA y la aprueba DG)
 	aprobador_id != input.sujeto.id # en este caso el sujeto es quien solicitó el cambio (en DC)
 	atributos["cambio.aprobador_rol"] == "DIRECCION_GENERAL"
 }
