@@ -17,9 +17,6 @@ on:
   push:
     branches:
       - develop
-      # TEMPORAL: para probar el despliegue desde la rama de trabajo. Quitar
-      # antes de fusionar, en develop no debe quedar una rama suelta listada.
-      - feature/despliegue-gcp
     paths:
       - "services/**"
       - ".github/workflows/desplegar.yml"
