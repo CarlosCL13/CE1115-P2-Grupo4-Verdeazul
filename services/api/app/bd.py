@@ -73,9 +73,9 @@ def _grupo(url: str) -> ConnectionPool:
         min_size=config.CONEXIONES_MIN,
         max_size=config.CONEXIONES_MAX,
         kwargs={
-            # psycopg[binary] trae libpq 14, que no entiende
-            # sslrootcert=system. certifi sirve igual en Windows, en Linux y
-            # en el contenedor.
+            # Windows no expone un almacen de autoridades que OpenSSL
+            # encuentre solo, asi que sslrootcert=system no sirve ahi.
+            # certifi funciona igual en Windows, en Linux y en el contenedor.
             "sslrootcert": certifi.where(),
             "row_factory": dict_row,
         },

@@ -6,10 +6,10 @@
 # Versiones exactas: una version flotante hace que la migracion que a vos te
 # funciono no le funcione al siguiente.
 
-psycopg[binary]==3.2.3
+psycopg[binary]==3.3.8
 
-# Autoridades certificadoras de Mozilla. psycopg[binary] trae libpq 14, que no
-# entiende sslrootcert=system (eso es de la 16), y Windows no expone un almacen
-# que OpenSSL encuentre solo. Sin esto, verify-full falla y la tentacion es
-# bajar a require, que cifra pero no verifica la identidad del servidor.
+# Autoridades certificadoras de Mozilla, para que sslmode=verify-full tenga
+# contra que verificar. Windows no expone un almacen que OpenSSL ubique solo.
+# Sin esto, verify-full falla y la tentacion es bajar a require, que cifra
+# pero no verifica la identidad del servidor.
 certifi==2026.10.23
