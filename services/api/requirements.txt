@@ -1,10 +1,20 @@
-# Pendiente: congelar las versiones exactas con `pip freeze` despues de la
-# primera construccion que funcione. P1 se comprometio a dependencias fijadas
-# (E4, ficha de lenguaje), y Dependabot avisa mejor sobre versiones fijas.
-fastapi
+# Versiones exactas. P1 se comprometio a dependencias fijadas (E4, ficha de
+# lenguaje), y Dependabot avisa mejor sobre versiones fijas que sobre rangos.
+
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+
 # Habla con el motor de politicas en el contenedor adjunto. Se eligio sobre
 # urllib porque mantiene la conexion abierta: hay varias autorizaciones por
 # peticion del usuario y un handshake TCP por cada una se nota.
-httpx
-uvicorn[standard]
-psycopg[binary]
+httpx==0.28.1
+
+psycopg[binary]==3.3.8
+psycopg_pool==3.3.3
+
+# Las autoridades certificadoras de Mozilla, para que sslmode=verify-full
+# encuentre contra que verificar. Windows no expone un almacen que OpenSSL
+# ubique solo, asi que sslrootcert=system no sirve ahi aunque la libpq que
+# trae psycopg ya lo entienda. Sin esto, verify-full falla y la tentacion es
+# bajar a require, que cifra pero no verifica al servidor.
+certifi==2026.10.23

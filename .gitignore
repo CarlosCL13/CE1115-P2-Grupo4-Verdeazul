@@ -65,3 +65,11 @@ Thumbs.db
 # que uno consulta cien veces mientras programa.
 docs/Enunciado_P2/
 docs/Docs_P1/
+
+# Volcados de base de datos: llevan datos, no esquema.
+# Los .sql de db/ si se versionan, por eso se nombran los patrones en vez de
+# ignorar *.sql en bloque.
+*.dump
+*.sql.gz
+*.backup
+db/volcados/

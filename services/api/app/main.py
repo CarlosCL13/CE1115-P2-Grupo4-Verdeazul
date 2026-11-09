@@ -1,17 +1,38 @@
 """Backend de la plataforma Verdeazul. Punto de aplicacion (PEP).
 
-Por ahora solo expone /salud, que sirve para comprobar de punta a punta que
-Secret Manager entrega la cadena de conexion, que Cloud Run la recibe como
-variable de entorno y que Neon responde por TLS.
+Aqui se registran los modulos de cada frente. Cada uno expone un router y se
+agrega con una sola linea, para que un conflicto de git sea de una linea.
+
+Por ahora solo esta /salud, que reporta por separado el motor de politicas y
+la base de datos.
 """
 
-import os
+import contextlib
 
-import psycopg
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
+from app import bd, config
 from app.authz.Servicio_opa import motor_disponible
+
+
+@contextlib.asynccontextmanager
+async def ciclo(app: FastAPI):
+    """Abre las conexiones al levantar y las cierra al apagar.
+
+    Abrirlas aqui y no en la primera peticion hace que un problema de
+    credenciales se vea cuando el servicio arranca.
+
+    En local no corta el arranque si no hay base: el ciclo de trabajo sobre
+    las politicas levanta api y policies sin base de datos, y /salud lo
+    reporta como sin configurar.
+    """
+    bd.arrancar()
+    try:
+        yield
+    finally:
+        bd.cerrar()
+
 
 app = FastAPI(
     title="Verdeazul Carbono",
@@ -19,34 +40,13 @@ app = FastAPI(
     docs_url=None,
     redoc_url=None,
     openapi_url=None,
+    lifespan=ciclo,
 )
 
-# La version de la imagen la inyecta Cloud Run al desplegar. Sirve para
-# responder "que version esta corriendo" sin entrar a la consola.
-VERSION = os.getenv("APP_VERSION", "dev")
-
-
-def _estado_de_la_base() -> dict[str, object]:
-    """Si Neon responde por TLS y con que version."""
-    url = os.getenv("DATABASE_URL")
-    if not url:
-        return {"estado": "sin configurar"}
-
-    try:
-        with psycopg.connect(url, connect_timeout=10) as conexion:
-            with conexion.cursor() as cursor:
-                cursor.execute("SELECT version(), now()")
-                version_bd, ahora = cursor.fetchone()
-    except Exception:
-        # Sin detalles al cliente: un mensaje de error de base de datos
-        # revela estructura interna. El detalle va a la bitacora.
-        return {"estado": "inaccesible"}
-
-    return {
-        "estado": "ok",
-        "version": version_bd.split(" on ")[0],
-        "hora_servidor": ahora.isoformat(),
-    }
+# Aqui va una linea por modulo, a medida que existan:
+#
+# from app.cuentas import router as router_cuentas
+# app.include_router(router_cuentas)
 
 
 def _estado_del_motor() -> dict[str, object]:
@@ -58,6 +58,17 @@ def _estado_del_motor() -> dict[str, object]:
     pensando que la matriz esta mal transcrita.
     """
     return {"estado": "ok" if motor_disponible() else "no responde"}
+
+
+def _estado_de_la_base() -> dict[str, object]:
+    """Si Neon responde.
+
+    Sin detalles del error al cliente: un mensaje de base de datos revela
+    estructura interna. El detalle va a los registros.
+    """
+    if config.BD_URL is None:
+        return {"estado": "sin configurar"}
+    return {"estado": "ok" if bd.esta_viva() else "inaccesible"}
 
 
 @app.get("/salud")
@@ -77,8 +88,8 @@ def salud() -> JSONResponse:
         status_code=200 if todo_bien else 503,
         content={
             "estado": "ok" if todo_bien else "degradado",
-            "version": VERSION,
             "motor_de_politicas": motor,
             "base_de_datos": base,
+            **config.resumen(),
         },
     )

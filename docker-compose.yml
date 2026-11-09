@@ -7,7 +7,9 @@ services:
       PORT: 8080
       APP_VERSION: local
     env_file:
-      - path: ./services/api/.env # carga todas las variables del archivo (variables de entorno)
+      # El .env vive en la raiz del repo, no por servicio: config.py lo lee de
+      # ahi y es el que describe .env.example.
+      - path: ./.env
         required: false # si no existe el archivo .env no se detiene la construcción del contenedor
     ports:
       - "127.0.0.1:8080:8080" # esta es la dirección de la API que se expone al host (para pruebas)

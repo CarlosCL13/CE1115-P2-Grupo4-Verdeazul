@@ -1,0 +1,15 @@
+# Lo que necesita db/migrar.py. No es dependencia de los servicios: las
+# migraciones se aplican desde la maquina de quien las escribe.
+#
+#   .venv/Scripts/python.exe -m pip install -r db/requirements.txt
+#
+# Versiones exactas: una version flotante hace que la migracion que a vos te
+# funciono no le funcione al siguiente.
+
+psycopg[binary]==3.3.8
+
+# Autoridades certificadoras de Mozilla, para que sslmode=verify-full tenga
+# contra que verificar. Windows no expone un almacen que OpenSSL ubique solo.
+# Sin esto, verify-full falla y la tentacion es bajar a require, que cifra
+# pero no verifica la identidad del servidor.
+certifi==2026.10.23
