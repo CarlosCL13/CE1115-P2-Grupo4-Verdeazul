@@ -11,7 +11,7 @@ from app.bitacora import registrar
 registrar(
     accion="CERTIFICADO_EMITIDO",
     sujeto="u-42",
-    objeto="O5:cert-001",
+    objeto="O5:12",
     resultado="PERMITIDO",
     detalle={"medicion": "med-77", "huella_llave": "SHA256:abc..."},
 )
@@ -27,9 +27,9 @@ Quien emite no sabe cómo se guarda. Eso es del transmisor (F5).
 | `momento` | timestamptz | sí | Lo pone la base, con `now()`. **Nunca la hora del cliente** |
 | `accion` | str | sí | Verbo en mayúsculas: `SESION_INICIADA`, `MEDICION_APROBADA`, `CERTIFICADO_EMITIDO` |
 | `sujeto` | str | sí | El `id` de quien actuó, o `ANONIMO` |
-| `objeto` | str | sí | `O5:cert-001`, con el número de objeto adelante |
+| `objeto` | str | sí | `O5:12`, el número de objeto y el id de la fila |
 | `resultado` | str | sí | `PERMITIDO` o `DENEGADO` |
-| `motivo` | str | si fue denegado | El `motivo` que devolvió `puede(...)` |
+| `motivo` | str | si fue denegado | El `motivo` de la `Decision` que devolvió `servicio_consulta_autorizacion(...)` |
 | `detalle` | jsonb | no | Contexto. **Sin datos personales ni secretos** |
 | `eslabon` | str | sí | HMAC de este evento más el `eslabon` del anterior |
 

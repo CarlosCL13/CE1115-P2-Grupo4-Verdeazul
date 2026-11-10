@@ -90,13 +90,9 @@ concedido se niega, y que si el motor se cae la respuesta es no.
 Sus carpetas son `services/api/app/authz/`, `services/policies/rego/` y
 `tests/matriz/`. Es la única persona que casi no escribe SQL ni HTML.
 
-Lo que los demás necesitan de ella: la función `puede()` del contrato 02,
-entregada el día uno con un cuerpo que deniega todo. Parece inútil y es lo
-contrario. Permite que las personas 1, 2, 4 y 5 escriban sus endpoints llamando
-a `puede(...)` desde el principio, y cuando el motor de verdad esté, nadie tiene
-que cambiar una línea: las mismas llamadas empiezan a devolver `permitido` donde
-corresponde. De paso el sistema arranca en el estado seguro, que es justo lo que
-la matriz exige por omisión.
+Lo que los demás necesitan de ella: la función de autorización del contrato 02.
+Ya está entregada como `servicio_consulta_autorizacion()`, con el motor
+completo en Rego y las 968 combinaciones de la matriz probadas.
 
 Lo que ella necesita: el `Sujeto` de la persona 2 para saber quién pregunta, y
 los nombres de estado de la persona 4 para escribir las condiciones. C2 y C11

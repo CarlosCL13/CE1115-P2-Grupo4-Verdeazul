@@ -6,20 +6,22 @@ Implementación y despliegue del sistema diseñado en la Parte 1: control de acc
 
 ## Estado
 
+Desplegado en **https://verdeazul-edge-igwgmkeipa-uk.a.run.app**
+
 | Pieza | Estado |
 |---|---|
-| Neon PostgreSQL, base principal y bitácora | Creadas y verificadas |
-| Esqueleto del backend con `/salud` | Listo |
-| Servicio de borde con plantillas | Esqueleto listo |
-| Dockerfile sin root, los cuatro componentes | Listos, pendientes de construir |
-| Contratos entre frentes | Escritos, el esquema ya implementado |
-| Matriz transcrita y pruebas de cobertura | Armadas: 884 denegaciones pasan, 84 concesiones en espera del motor |
+| Servicio de borde en Cloud Run | Desplegado. Es la única dirección pública |
+| Backend y motor de políticas en Cloud Run | Desplegados juntos, cerrados a internet |
+| Despliegue automático | Cada push a `develop` construye, publica y despliega, sin llaves |
+| Secret Manager | Tres secretos, inyectados como variables de entorno |
+| Neon, base principal y bitácora | Esquema aplicado: 15 tablas, 7 tipos enumerados, 5 roles |
+| Motor de políticas en Rego | Completo: 88 celdas y las condiciones C1 a C11 |
+| Pruebas de la matriz | 977, corren en cada pull request contra un OPA real |
 | Dependabot | Configurado para los cuatro componentes |
-| Integración continua | Configurada, sin tocar Google Cloud |
-| Esquema de base de datos en SQL | Aplicado: 15 tablas, 7 tipos enumerados |
-| Motor de políticas en Rego | Relleno que deniega todo |
-| Cuenta de facturación de Google Cloud | Bloqueada, esperando resolución |
-| Artifact Registry y Cloud Run | Pendientes de la facturación |
+| Autenticación | Sin empezar |
+| Endpoints de la matriz | 1 de 57 (`/salud`) |
+| Firma de certificados | Sin empezar |
+| Transmisor de bitácora | Esqueleto que responde 501 |
 
 ## Estructura
 
@@ -38,11 +40,11 @@ services/
   transmisor/              Bandeja de salida a bitácora y trabajos programados
 tests/matriz/              Una prueba por celda: la tabla de cobertura
 .github/
-  workflows/               Integración continua
+  workflows/               Integración continua y despliegue
   dependabot.yml           Revisión semanal de dependencias
 ```
 
-Los cuatro componentes de `services/` corresponden uno a uno con la arquitectura de la Parte 1 y cada uno tiene su propia imagen, como exige §3.2 del enunciado. Hoy son esqueletos: el motor de políticas deniega todo a propósito y el esquema todavía no existe en SQL.
+Los cuatro componentes de `services/` corresponden uno a uno con la arquitectura de la Parte 1 y cada uno tiene su propia imagen, como exige §3.2 del enunciado. El motor de políticas y el esquema están completos; el backend todavía no tiene los endpoints de la matriz y el transmisor es un esqueleto.
 
 Los documentos de la Parte 1 y el enunciado no se versionan. Están en el disco de cada uno pero fuera de git: el enunciado es material del profesor y este repositorio es público, y los documentos de la Parte 1 pesan 5.9 MB que el profesor ya tiene. Lo que sí se consulta a diario está transcrito en [contracts/matriz.md](contracts/matriz.md).
 
@@ -83,48 +85,59 @@ docker run --rm -p 8080:8080 --env-file .env verdeazul-api:dev
 
 El archivo `.env` está ignorado por git y tiene que seguir estándolo. La cadena de conexión de Neon no se pega en ningún archivo versionado, ni siquiera temporalmente, porque el historial de git conserva lo que se borra después.
 
-## Construir y publicar una imagen
-
-Las imágenes llevan etiqueta de versión explícita. La etiqueta `latest` no se usa, porque se mueve y no permite saber qué está corriendo en producción ni a qué versión volver.
-
-```bash
-VERSION=v0.1.0
-REGION=us-east4
-PROYECTO=verdeazul-grupo4
-REPO=verdeazul
-
-docker build -t ${REGION}-docker.pkg.dev/${PROYECTO}/${REPO}/api:${VERSION} services/api
-docker push ${REGION}-docker.pkg.dev/${PROYECTO}/${REPO}/api:${VERSION}
-```
-
-Cada etiqueta de imagen corresponde a una etiqueta de git del mismo nombre, de modo que se puede ir de la versión que corre en producción al estado exacto del código.
-
 ## Desplegar
 
-```bash
-gcloud run deploy verdeazul-api \
-  --image ${REGION}-docker.pkg.dev/${PROYECTO}/${REPO}/api:${VERSION} \
-  --region ${REGION} \
-  --set-secrets DATABASE_URL=verdeazul-db-url:latest \
-  --set-env-vars APP_VERSION=${VERSION} \
-  --no-allow-unauthenticated
-```
+No se despliega a mano. [.github/workflows/desplegar.yml](.github/workflows/desplegar.yml)
+corre solo cuando algo de `services/` entra a `develop`, y también se puede
+lanzar desde la pestaña Actions de GitHub.
 
-El backend no acepta invocaciones anónimas. Solo la cuenta de servicio del servicio de borde puede llamarlo, que es como se implementa la frontera de confianza F2 del diseño.
+El workflow se autentica en Google Cloud con federación de identidad: GitHub
+firma un token que dice qué repositorio lo pide y Google lo canjea por un
+permiso temporal. No existe ningún archivo de credenciales de Google, ni en el
+repositorio ni en los secretos de GitHub.
+
+Despliega dos servicios en `us-east4`, proyecto `verdeazul-g4`:
+
+| Servicio | Contenedores | Acceso |
+|---|---|---|
+| `verdeazul-edge` | `edge` | Público |
+| `verdeazul-api` | `api` y `policies`, que comparten red | Solo con credencial de Google |
+
+El backend no acepta invocaciones anónimas. Esa es la frontera de confianza F2
+del diseño.
+
+Las imágenes llevan como etiqueta los primeros siete caracteres del commit.
+`latest` no se usa, porque se mueve y no permite saber qué está corriendo ni a
+qué versión volver.
 
 ## Secretos
 
 Ninguna credencial vive en el repositorio, en las imágenes ni en el Dockerfile. Se guardan en Secret Manager y Cloud Run las inyecta como variables de entorno con `--set-secrets`, de modo que la configuración de la revisión guarda una referencia al secreto y no su valor.
 
-Los secretos previstos son cuatro: la cadena de conexión de la base principal, la de la bitácora, la llave privada de firma de certificados y la llave del HMAC de la cadena de la bitácora.
+Hoy hay tres: la cadena de conexión de la base principal (`verdeazul-db-url`), la de lectura de la bitácora (`verdeazul-bitacora-lectura-url`) y la llave del HMAC de búsqueda de cédulas (`llave-busqueda-cedula`). Faltan la llave privada de firma de certificados y la del HMAC de la cadena de la bitácora, que llegan con esas dos piezas.
+
+El backend corre con su propia cuenta de servicio, que solo puede leer esos secretos. Sin ella, Cloud Run usaría la cuenta por omisión de Compute, que tiene permisos de Editor sobre todo el proyecto.
 
 La capa gratuita permite seis versiones de secreto activas, así que al crear una versión nueva hay que deshabilitar la anterior.
 
 ## Versiones publicadas
 
-| Versión | Imagen | Commit | Desplegada |
+Cada etiqueta es el commit del que salió la imagen, así que `git show <etiqueta>` lleva al código exacto. Las imágenes viven en `us-east4-docker.pkg.dev/verdeazul-g4/verdeazul`.
+
+| Etiqueta | Imágenes | Fecha | Qué trajo |
 |---|---|---|---|
-| | | | |
+| `bdec178` | api, policies, edge | 2026-11-09 | Despliegue de `develop` con el PR #13. **Es la que corre hoy** |
+| `d2f1d2e` | api, policies, edge | 2026-11-09 | El grupo de conexiones aguanta que Cloud Run y Neon se duerman |
+| `8653dbb` | api, policies, edge | 2026-11-09 | Primer despliegue del backend con el motor como contenedor adjunto |
+| `d4cc04b` | edge | 2026-11-09 | Primer despliegue: solo el borde |
+
+Cada despliegue agrega una fila arriba. La lista completa, por si esta tabla se atrasa:
+
+```bash
+gcloud artifacts docker tags list us-east4-docker.pkg.dev/verdeazul-g4/verdeazul
+```
+
+La versión que está corriendo sale al pie de cada página del borde («versión bdec178») y en el campo `version` de `/salud` del backend.
 
 ## Equipo
 
