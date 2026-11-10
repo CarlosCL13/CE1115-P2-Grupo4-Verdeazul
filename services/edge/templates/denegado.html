@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block titulo %}Acceso denegado · Verdeazul Carbono{% endblock %}
+
+{% block contenido %}
+<h1>Acceso denegado</h1>
+
+<p class="error">
+  El servidor rechazó esta operación: su rol no tiene ese permiso sobre este
+  recurso, o no se cumple la condición que la matriz de control de acceso
+  exige. El intento quedó registrado en la bitácora.
+</p>
+
+<p><a href="{{ '/panel' if sesion else '/' }}">Volver</a></p>
+{% endblock %}

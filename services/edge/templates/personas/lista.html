@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block titulo %}Datos personales · Verdeazul Carbono{% endblock %}
+
+{% block contenido %}
+<h1>Datos personales de dueños</h1>
+
+{% if error %}<p class="error">{{ error }}</p>{% endif %}
+
+{% if sesion and sesion.rol != 'DUENO_FINCA' %}
+<form method="get" action="/personas" class="busqueda">
+  <label for="cedula">Buscar por cédula</label>
+  <input type="text" id="cedula" name="cedula" value="{{ cedula }}"
+         maxlength="20" placeholder="1-1234-0567">
+  <button type="submit">Buscar</button>
+</form>
+{% endif %}
+
+<table>
+  <thead><tr><th>Nombre</th><th>Usuario</th><th>Cédula</th><th></th></tr></thead>
+  <tbody>
+    {% for p in personas %}
+      <tr>
+        <td>{{ p.nombre_completo }}</td>
+        <td>{{ p.usuario }}</td>
+        <td><code>{{ p.cedula }}</code></td>
+        <td><a href="/personas/{{ p.cuenta }}">Ver</a></td>
+      </tr>
+    {% else %}
+      <tr><td colspan="4">{{ 'Ninguna coincide con esa cédula.' if cedula else 'No hay datos registrados.' }}</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<p class="nota">
+  La cédula se busca sin descifrarla: se compara su HMAC con llave. En la
+  base de datos la cédula y el teléfono están cifrados (LG-05), y en esta
+  lista solo se muestran los últimos cuatro dígitos.
+</p>
+
+{% if sesion and sesion.rol == 'PERSONAL_ADMINISTRATIVO' %}
+  <p><a href="/personas/nueva">Registrar los datos de un dueño</a></p>
+{% endif %}
+{% endblock %}

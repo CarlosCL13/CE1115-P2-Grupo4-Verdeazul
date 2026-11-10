@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block titulo %}Activar segundo factor · Verdeazul Carbono{% endblock %}
+
+{% block contenido %}
+<h1>Activar el segundo factor</h1>
+
+{% if error %}<p class="error">{{ error }}</p>{% endif %}
+
+{% if not alta %}
+  <p>
+    Su rol exige un segundo factor para entrar, o usted decidió activarlo.
+    Necesita una aplicación autenticadora en el teléfono (Google Authenticator,
+    Microsoft Authenticator, Aegis, 2FAS u otra compatible con TOTP). Los
+    códigos por SMS no se usan, porque se pueden robar duplicando la SIM.
+  </p>
+  <form method="post" action="/segundo-factor/activar">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <button type="submit">Generar el código QR</button>
+  </form>
+{% else %}
+  <p>Escanee este código con la aplicación:</p>
+  <p><img class="qr" src="{{ alta.qr }}" alt="Código QR para la aplicación autenticadora"></p>
+  <p class="nota">
+    ¿No puede escanearlo? Escriba esta clave en la aplicación:<br>
+    <code>{{ alta.secreto }}</code>
+  </p>
+
+  <form method="post" action="/segundo-factor/confirmar">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <label for="codigo">Escriba el código de seis dígitos que muestra la aplicación</label>
+    <input type="text" id="codigo" name="codigo" inputmode="numeric"
+           autocomplete="one-time-code" pattern="[0-9 ]{6,7}" maxlength="7"
+           required autofocus>
+    <button type="submit">Confirmar y activar</button>
+  </form>
+{% endif %}
+{% endblock %}

@@ -88,3 +88,16 @@ footer {
   color: var(--apagado);
   border-top: 1px solid var(--borde);
 }
+
+/* Identidad (persona 2) */
+.marca { color: inherit; text-decoration: none; }
+form.en-linea { display: inline-flex; flex-direction: row; align-items: center; gap: 0.4rem; max-width: none; margin: 0; }
+form.en-linea button { margin-top: 0; }
+form.busqueda { flex-direction: row; align-items: flex-end; flex-wrap: wrap; max-width: none; }
+select { padding: 0.5rem 0.6rem; border: 1px solid var(--borde); border-radius: 3px; font: inherit; }
+img.qr { width: 14rem; height: 14rem; image-rendering: pixelated; border: 1px solid var(--borde); }
+ul.codigos { columns: 2; font-size: 1.05rem; }
+.error ul { margin: 0; padding-left: 1.1rem; }
+table input { width: 8rem; padding: 0.25rem 0.4rem; font-size: 0.85rem; }
+td form.en-linea + form.en-linea { margin-top: 0.3rem; }
+td:last-child { white-space: nowrap; }

@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block titulo %}Confirmar identidad · Verdeazul Carbono{% endblock %}
+
+{% block contenido %}
+<h1>Confirme su identidad</h1>
+
+<p>
+  La acción que intentó es de las que exigen volver a confirmar quién es.
+  Después de confirmar, vuelva a intentarla: tiene
+  unos minutos antes de que se pida de nuevo.
+</p>
+
+{% if error %}<p class="error">{{ error }}</p>{% endif %}
+
+<form method="post" action="/reautenticar">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <input type="hidden" name="siguiente" value="{{ siguiente }}">
+
+  <label for="clave">Contraseña</label>
+  <input type="password" id="clave" name="clave" autocomplete="current-password"
+         required autofocus>
+
+  {% if sesion and sesion.segundo_factor.activo %}
+    <label for="codigo">Código de seis dígitos</label>
+    <input type="text" id="codigo" name="codigo" inputmode="numeric"
+           autocomplete="one-time-code" pattern="[0-9 ]{6,7}" maxlength="7" required>
+  {% endif %}
+
+  <button type="submit">Confirmar</button>
+</form>
+{% endblock %}

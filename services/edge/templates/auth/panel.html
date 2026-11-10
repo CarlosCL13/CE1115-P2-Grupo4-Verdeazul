@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block titulo %}Panel · Verdeazul Carbono{% endblock %}
+
+{% block contenido %}
+<h1>Hola, {{ sesion.nombre }}</h1>
+
+{% if intentos %}
+  <p class="error">
+    Desde su último ingreso hubo {{ intentos }} intento{{ 's' if intentos != 1 }}
+    fallido{{ 's' if intentos != 1 }} de entrar a esta cuenta. Si no fue usted,
+    cambie la contraseña.
+  </p>
+{% endif %}
+
+<table>
+  <tbody>
+    <tr><th>Usuario</th><td>{{ sesion.usuario }}</td></tr>
+    <tr><th>Rol</th><td>{{ sesion.rol }}</td></tr>
+    <tr><th>Zonas asignadas</th><td>{{ sesion.zonas | join(', ') or 'ninguna' }}</td></tr>
+    <tr><th>Segundo factor</th>
+        <td>{{ 'activo' if sesion.segundo_factor.activo else 'sin activar' }}
+            {% if not sesion.segundo_factor.activo %}
+              · <a href="/segundo-factor/activar">activarlo</a>
+            {% endif %}</td></tr>
+    <tr><th>La sesión vence</th><td>{{ sesion.expira_en[:16] | replace('T', ' ') }} UTC</td></tr>
+  </tbody>
+</table>
+
+<h2>Mi cuenta</h2>
+<ul>
+  <li><a href="/clave">Cambiar mi contraseña</a></li>
+</ul>
+
+{# Los enlaces son comodidad. Quien decide es el backend: cualquiera puede
+   escribir la direccion a mano y el servidor responde 403 si no le toca. #}
+{% if sesion.rol in ('DIRECCION_GENERAL', 'PERSONAL_ADMINISTRATIVO', 'DUENO_FINCA') %}
+<h2>Datos personales</h2>
+<ul>
+  <li><a href="/personas">{{ 'Mis datos' if sesion.rol == 'DUENO_FINCA' else 'Buscar dueños de finca' }}</a></li>
+  {% if sesion.rol == 'PERSONAL_ADMINISTRATIVO' %}
+    <li><a href="/personas/nueva">Registrar los datos de un dueño</a></li>
+  {% endif %}
+</ul>
+{% endif %}
+
+{% if sesion.rol in ('DIRECCION_GENERAL', 'PERSONAL_ADMINISTRATIVO') %}
+<h2>Cuentas y roles</h2>
+<ul>
+  <li><a href="/cuentas">Cuentas</a></li>
+  <li><a href="/solicitudes">Solicitudes de alta, cambio de rol y baja</a></li>
+</ul>
+{% endif %}
+
+<h2>Certificados</h2>
+<ul>
+  <li><a href="/">Verificar un certificado</a></li>
+</ul>
+{% endblock %}

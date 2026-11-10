@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block titulo %}Cuentas · Verdeazul Carbono{% endblock %}
+
+{% block contenido %}
+<h1>Cuentas y roles</h1>
+
+{% if sesion and sesion.rol == 'PERSONAL_ADMINISTRATIVO' %}
+  <p class="nota">
+    Su rol ve una cuenta solo cuando tiene un cambio aprobado por la Dirección
+    General pendiente de aplicar (C10). Sin aprobación previa, no hay lectura.
+  </p>
+{% endif %}
+
+<table>
+  <thead><tr><th>Usuario</th><th>Nombre</th><th>Rol</th><th>Estado</th><th>Cambio aprobado</th></tr></thead>
+  <tbody>
+    {% for c in cuentas %}
+      <tr>
+        <td>{{ c.usuario }}</td>
+        <td>{{ c.nombre }}</td>
+        <td>{{ c.rol }}</td>
+        <td>{{ 'activa' if c.activa else 'de baja' }}{{ ' · bloqueada' if c.bloqueada }}{{ ' · 2FA' if c.segundo_factor }}</td>
+        <td>
+          {% if c.solicitud_aprobada %}
+            {{ c.solicitud_aprobada.tipo }} {{ c.solicitud_aprobada.rol or '' }}
+            (solicitud {{ c.solicitud_aprobada.id }})
+          {% endif %}
+        </td>
+      </tr>
+    {% else %}
+      <tr><td colspan="5">No hay cuentas que mostrar.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<p><a href="/solicitudes">Solicitudes de alta, cambio de rol y baja</a></p>
+{% endblock %}

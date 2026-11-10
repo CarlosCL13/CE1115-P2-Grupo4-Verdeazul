@@ -9,18 +9,23 @@
   <p class="error">{{ error }}</p>
 {% endif %}
 
+{# Sin token CSRF: todavia no hay sesion a la cual atarlo. Lo protege el
+   control de origen del borde (main.py), y la cookie nace SameSite=Strict. #}
 <form method="post" action="/entrar">
-  {# PENDIENTE (F2): token CSRF por sesion en un campo oculto. #}
   <label for="usuario">Usuario</label>
-  <input type="text" id="usuario" name="usuario" autocomplete="username" required>
+  <input type="text" id="usuario" name="usuario" autocomplete="username"
+         maxlength="64" required autofocus>
 
+  {# CO-04: se puede pegar, para usar un gestor de contraseñas. #}
   <label for="clave">Contraseña</label>
-  <input type="password" id="clave" name="clave" autocomplete="current-password" required>
+  <input type="password" id="clave" name="clave" autocomplete="current-password"
+         maxlength="1024" required>
 
   <button type="submit">Entrar</button>
 </form>
 
 <p class="nota">
-  Tras cinco intentos fallidos la cuenta se bloquea temporalmente (RC-01).
+  Desde el quinto intento fallido hay que esperar cada vez más, y al décimo la
+  cuenta se bloquea 30 minutos (RC-01).
 </p>
 {% endblock %}

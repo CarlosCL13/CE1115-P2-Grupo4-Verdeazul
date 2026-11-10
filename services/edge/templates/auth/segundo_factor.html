@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block titulo %}Segundo factor · Verdeazul Carbono{% endblock %}
+
+{% block contenido %}
+<h1>Código de verificación</h1>
+
+{% if error %}<p class="error">{{ error }}</p>{% endif %}
+
+<form method="post" action="/segundo-factor">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <label for="codigo">Código de seis dígitos de su aplicación autenticadora</label>
+  <input type="text" id="codigo" name="codigo" inputmode="numeric"
+         autocomplete="one-time-code" pattern="[0-9 ]{6,7}" maxlength="7" autofocus>
+  <button type="submit">Verificar</button>
+</form>
+
+<h2>¿No tiene el teléfono?</h2>
+<form method="post" action="/segundo-factor">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <label for="recuperacion">Código de recuperación</label>
+  <input type="text" id="recuperacion" name="recuperacion" maxlength="32"
+         autocomplete="off" placeholder="XXXX-XXXX-XX">
+  <button type="submit">Usar código de recuperación</button>
+</form>
+<p class="nota">
+  Cada código de recuperación sirve una sola vez, y usarlo cierra las demás
+  sesiones abiertas de la cuenta (RC-04).
+</p>
+{% endblock %}

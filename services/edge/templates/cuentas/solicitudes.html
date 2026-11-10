@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block titulo %}Solicitudes · Verdeazul Carbono{% endblock %}
+
+{% block contenido %}
+<h1>Solicitudes de cambio de cuenta</h1>
+
+<p class="nota">
+  Nadie se asigna permisos a sí mismo (CU-03). El personal administrativo
+  registra la solicitud, la Dirección General la aprueba y el personal
+  administrativo la aplica. Quien aprueba no puede aplicar, y quien pide no
+  puede aprobar (C10, SR-04).
+</p>
+
+{% if error %}<p class="error">{{ error }}</p>{% endif %}
+
+<table>
+  <thead>
+    <tr><th>#</th><th>Tipo</th><th>Cuenta</th><th>Rol</th><th>Estado</th><th>Pidió</th><th>Aprobó</th><th></th></tr>
+  </thead>
+  <tbody>
+    {% for s in solicitudes %}
+      <tr>
+        <td>{{ s.id }}</td>
+        <td>{{ s.tipo }}</td>
+        <td>{{ s.usuario or s.usuario_nuevo }}{% if s.tipo == 'ALTA' %} <span class="nota">({{ s.nombre_nuevo }})</span>{% endif %}</td>
+        <td>{% if s.tipo == 'CAMBIO_ROL' and s.estado in ('PENDIENTE', 'APROBADA') %}{{ s.rol_actual }} → {% endif %}{{ s.rol or '' }}</td>
+        <td>{{ s.estado }}{% if s.motivo_rechazo %} <span class="nota">({{ s.motivo_rechazo }})</span>{% endif %}</td>
+        <td>{{ s.solicitante }}</td>
+        <td>{{ s.aprobador or '' }}</td>
+        <td>
+          {% if s.estado == 'PENDIENTE' and sesion and sesion.rol == 'DIRECCION_GENERAL' %}
+            <form method="post" action="/solicitudes/{{ s.id }}/aprobar" class="en-linea">
+              <input type="hidden" name="csrf" value="{{ csrf }}">
+              <button>Aprobar</button>
+            </form>
+            <form method="post" action="/solicitudes/{{ s.id }}/rechazar" class="en-linea">
+              <input type="hidden" name="csrf" value="{{ csrf }}">
+              <input type="text" name="motivo" placeholder="motivo" minlength="5" maxlength="500" required>
+              <button>Rechazar</button>
+            </form>
+          {% elif s.estado == 'APROBADA' and sesion and sesion.rol == 'PERSONAL_ADMINISTRATIVO' %}
+            <form method="post" action="/solicitudes/{{ s.id }}/aplicar" class="en-linea">
+              <input type="hidden" name="csrf" value="{{ csrf }}">
+              <input type="hidden" name="tipo" value="{{ s.tipo }}">
+              {% if s.tipo != 'ALTA' %}<input type="hidden" name="cuenta" value="{{ s.cuenta_afectada or '' }}">{% endif %}
+              <button>Aplicar</button>
+            </form>
+          {% endif %}
+        </td>
+      </tr>
+    {% else %}
+      <tr><td colspan="8">No hay solicitudes.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% if sesion and sesion.rol == 'PERSONAL_ADMINISTRATIVO' %}
+<h2>Nueva solicitud</h2>
+<form method="post" action="/solicitudes">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+
+  <label for="tipo">Tipo</label>
+  <select id="tipo" name="tipo" required>
+    <option value="ALTA">Alta de una cuenta nueva</option>
+    <option value="CAMBIO_ROL">Cambio de rol</option>
+    <option value="BAJA">Baja</option>
+  </select>
+
+  <label for="usuario">Usuario existente (cambio de rol o baja)</label>
+  <input type="text" id="usuario" name="usuario" maxlength="64">
+
+  <label for="usuario_nuevo">Usuario nuevo (alta)</label>
+  <input type="text" id="usuario_nuevo" name="usuario_nuevo" maxlength="32"
+         pattern="[a-z0-9][a-z0-9._\-]{1,31}">
+
+  <label for="nombre_nuevo">Nombre de la persona (alta)</label>
+  <input type="text" id="nombre_nuevo" name="nombre_nuevo" maxlength="200">
+
+  <label for="rol">Rol (alta o cambio de rol)</label>
+  <select id="rol" name="rol">
+    <option value="">(ninguno, para una baja)</option>
+    {% for r in roles %}<option value="{{ r }}">{{ r }}</option>{% endfor %}
+  </select>
+
+  <label for="justificacion">Justificación (quién lo pidió y por qué)</label>
+  <input type="text" id="justificacion" name="justificacion" minlength="5" maxlength="500" required>
+
+  <button type="submit">Registrar solicitud</button>
+</form>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block titulo %}{{ 'Corregir datos' if persona else 'Registrar dueño' }} · Verdeazul Carbono{% endblock %}
+
+{% block contenido %}
+<h1>{{ 'Corregir datos personales' if persona else 'Registrar los datos de un dueño' }}</h1>
+
+{% if error %}<p class="error">{{ error }}</p>{% endif %}
+
+{% set v = valores or {} %}
+<form method="post" action="{{ '/personas/%d/editar' % persona.cuenta if persona else '/personas/nueva' }}">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+
+  {% if not persona %}
+    <label for="usuario">Usuario de la cuenta del dueño</label>
+    <input type="text" id="usuario" name="usuario" value="{{ v.usuario or '' }}"
+           maxlength="64" required>
+  {% endif %}
+
+  <label for="nombre_completo">Nombre completo</label>
+  <input type="text" id="nombre_completo" name="nombre_completo"
+         value="{{ v.nombre_completo or '' }}" maxlength="200" {{ 'required' if not persona }}>
+
+  <label for="cedula">Cédula</label>
+  <input type="text" id="cedula" name="cedula" value="{{ v.cedula or '' }}"
+         maxlength="20" placeholder="1-1234-0567" {{ 'required' if not persona }}>
+
+  <label for="telefono">Teléfono</label>
+  <input type="text" id="telefono" name="telefono" value="{{ v.telefono or '' }}"
+         maxlength="20" placeholder="+506 8888-1234">
+
+  <button type="submit">Guardar</button>
+</form>
+{% endblock %}

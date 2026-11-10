@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+
+{% block titulo %}Error · Verdeazul Carbono{% endblock %}
+
+{% block contenido %}
+<h1>No se pudo completar</h1>
+<p class="error">{{ mensaje }}</p>
+<p><a href="{{ '/panel' if sesion else '/' }}">Volver</a></p>
+{% endblock %}
