@@ -1,8 +1,7 @@
 # Integracion continua. Corre en cada pull request y en cada empuje a main.
 #
-# Que NO hace: no toca Google Cloud. No publica imagenes ni despliega. Eso va
-# en un workflow aparte cuando la facturacion este resuelta, y con federacion
-# de identidad, no con un archivo de credenciales.
+# Que NO hace: no toca Google Cloud. No publica imagenes ni despliega. Eso lo
+# hace desplegar.yml, con federacion de identidad y sin archivo de credenciales.
 #
 # Por que importa que esto exista desde el primer dia: cuando un frente abre un
 # pull request se corren las pruebas de los cinco. Si su cambio rompe algo de
@@ -36,6 +35,33 @@ jobs:
           pip install -r services/api/requirements.txt
           pip install pytest
 
+      # Las pruebas le preguntan al motor en 127.0.0.1:8181. Sin un OPA
+      # encendido aqui, el fixture de sesion las salta todas y pytest sale con
+      # 0: el check se ponia verde sin haber probado nada.
+      #
+      # La version sale del Dockerfile del motor, que es el que actualiza
+      # Dependabot. Asi el numero vive en un solo lugar.
+      - name: Instalar OPA
+        run: |
+          VERSION=$(sed -n 's|^FROM openpolicyagent/opa:\(.*\)-static.*|\1|p' services/policies/Dockerfile)
+          echo "OPA $VERSION, segun services/policies/Dockerfile"
+          curl -sSL -o opa "https://openpolicyagent.org/downloads/v$VERSION/opa_linux_amd64_static"
+          chmod +x opa
+          sudo mv opa /usr/local/bin/
+
+      # Si el motor no contesta en 30 segundos, el job falla en rojo y no se
+      # llega a pytest. Esa es la proteccion contra el verde vacio.
+      - name: Levantar el motor y esperarlo
+        run: |
+          opa run --server --addr=127.0.0.1:8181 services/policies/rego > opa.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl -sf http://127.0.0.1:8181/health > /dev/null && exit 0
+            sleep 1
+          done
+          echo "El motor de politicas no respondio en 30 segundos"
+          cat opa.log
+          exit 1
+
       # El pythonpath lo fija pytest.ini, no una variable de entorno: asi
       # corre igual aqui que en la maquina de cada uno.
       - name: Cobertura de la matriz
@@ -47,9 +73,12 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # La misma version que el contenedor, leida del Dockerfile.
       - name: Instalar OPA
         run: |
-          curl -sSL -o opa https://openpolicyagent.org/downloads/v1.4.2/opa_linux_amd64_static
+          VERSION=$(sed -n 's|^FROM openpolicyagent/opa:\(.*\)-static.*|\1|p' services/policies/Dockerfile)
+          echo "OPA $VERSION, segun services/policies/Dockerfile"
+          curl -sSL -o opa "https://openpolicyagent.org/downloads/v$VERSION/opa_linux_amd64_static"
           chmod +x opa
           sudo mv opa /usr/local/bin/
 
