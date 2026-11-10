@@ -190,6 +190,21 @@ objeto y ninguna celda lo cubre. Decidimos Dirección General. Es decisión
 nuestra, no heredada, y va a
 [`docs/P2_Desviaciones_respecto_P1.md`](../docs/P2_Desviaciones_respecto_P1.md).
 
+## Lo que agregó la 011
+
+La autenticación necesitó columnas que la 004 no previó. Van en
+`011_identidad_ajustes.sql`, porque un archivo aplicado no se edita.
+
+| Tabla | Columnas nuevas | Para qué |
+|---|---|---|
+| `sesiones` | `ultimo_uso`, `reautenticada_en` | Cierre por inactividad por perfil y reautenticación antes de acciones graves |
+| `credenciales` | `totp_ultimo_paso`, `codigos_recuperacion`, `debe_cambiar` | Un código TOTP no sirve dos veces, RC-02, y la clave temporal de una cuenta nueva |
+| `cuentas` | `desactivada_en` | Desde cuándo está de baja (CU-13) |
+| `solicitudes_rol` | `tipo`, `usuario_nuevo`, `nombre_nuevo`, `justificacion`, `aplicada_por`, `aplicada_en`, `rechazada_en`, `motivo_rechazo` | Que C10 cubra también el alta y la baja, no solo el cambio de rol |
+
+Y tres restricciones más que llevan CU-03 y C10 a la base:
+`nadie_pide_para_si`, `nadie_aprueba_para_si` y `aplica_otro_que_el_aprobador`.
+
 ## Dos límites de la plataforma
 
 Para el análisis de seguridad heredada que pide §5.2.

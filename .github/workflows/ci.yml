@@ -67,6 +67,73 @@ jobs:
       - name: Cobertura de la matriz
         run: pytest tests/matriz -v
 
+  # Identidad contra un PostgreSQL de verdad, con el mismo esquema y los mismos
+  # roles que Neon, y contra el mismo OPA. Las pruebas de contrasenas, sesion,
+  # segundo factor, C10 y datos personales necesitan la base: sin ella se
+  # saltarian y el check quedaria verde sin haber probado nada.
+  #
+  # La base es desechable y entra con autenticacion trust, asi que no hay
+  # ninguna contrasena en este archivo.
+  identidad:
+    name: Identidad contra PostgreSQL
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgis/postgis:17-3.5
+        env:
+          POSTGRES_USER: neondb_owner
+          POSTGRES_DB: neondb
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U neondb_owner"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      PGHOST: localhost
+      PGPORT: "5432"
+      PGUSER: neondb_owner
+      VERDEAZUL_PRUEBAS_BD: postgresql://app_rw@localhost:5432/neondb
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+
+      - name: Instalar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r services/api/requirements.txt
+          pip install pytest
+
+      - name: Instalar OPA
+        run: |
+          VERSION=$(sed -n 's|^FROM openpolicyagent/opa:\(.*\)-static.*|\1|p' services/policies/Dockerfile)
+          curl -sSL -o opa "https://openpolicyagent.org/downloads/v$VERSION/opa_linux_amd64_static"
+          chmod +x opa
+          sudo mv opa /usr/local/bin/
+
+      - name: Levantar el motor y esperarlo
+        run: |
+          opa run --server --addr=127.0.0.1:8181 services/policies/rego > opa.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl -sf http://127.0.0.1:8181/health > /dev/null && exit 0
+            sleep 1
+          done
+          cat opa.log
+          exit 1
+
+      - name: Esquema de verdeazul-app en la base desechable
+        run: bash tests/identidad/preparar_bd.sh
+
+      # -rs muestra cada prueba saltada. Si aparecen saltadas aqui, algo del
+      # entorno fallo y el verde no vale.
+      - name: Pruebas de identidad
+        run: pytest tests/identidad -v -rs
+
   politicas:
     name: Politicas en Rego
     runs-on: ubuntu-latest

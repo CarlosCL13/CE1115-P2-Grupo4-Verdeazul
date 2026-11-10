@@ -43,6 +43,12 @@ env:
   # por omision de Compute, que trae permisos de Editor sobre todo el proyecto.
   CUENTA_API: verdeazul-api@verdeazul-g4.iam.gserviceaccount.com
 
+  # Con la que corre el borde. Su unico permiso es invocar al backend
+  # (roles/run.invoker sobre verdeazul-api): es la otra mitad de la frontera
+  # F2. Sin ella el borde correria con la cuenta por omision de Compute, que
+  # es Editor de todo el proyecto, y es el unico servicio abierto a internet.
+  CUENTA_EDGE: verdeazul-edge@verdeazul-g4.iam.gserviceaccount.com
+
 jobs:
   # ---------------------------------------------------------------------------
   # Backend y motor de politicas, en un solo servicio con dos contenedores
@@ -98,7 +104,7 @@ jobs:
               --port=8080 \
               --memory=512Mi \
               --set-env-vars=APP_VERSION=${GITHUB_SHA::7} \
-              --set-secrets=VERDEAZUL_DB_URL=verdeazul-db-url:latest,VERDEAZUL_BITACORA_LECTURA_URL=verdeazul-bitacora-lectura-url:latest,LLAVE_BUSQUEDA_CEDULA=llave-busqueda-cedula:latest \
+              --set-secrets=VERDEAZUL_DB_URL=verdeazul-db-url:latest,VERDEAZUL_BITACORA_LECTURA_URL=verdeazul-bitacora-lectura-url:latest,LLAVE_BUSQUEDA_CEDULA=llave-busqueda-cedula:latest,LLAVE_CIFRADO_DATOS=llave-cifrado-datos:latest \
             --container=policies \
               --image="$IMAGEN_POL" \
               --memory=256Mi
@@ -147,14 +153,16 @@ jobs:
           echo "IMAGEN=$IMAGEN" >> "$GITHUB_ENV"
 
       # Sin --port: Cloud Run inyecta PORT y el Dockerfile lo respeta.
-      # API_URL apunta al backend, que todavia no se llama desde aqui pero
-      # queda listo para cuando el borde empiece a pedirle datos.
+      # API_URL apunta al backend. El borde lo llama con un token de identidad
+      # de su cuenta de servicio, que saca del servidor de metadatos (ver
+      # services/edge/app/api.py): ninguna llave en el codigo.
       - name: Desplegar en Cloud Run
         run: |
           gcloud run deploy verdeazul-edge \
             --image="$IMAGEN" \
             --region=${{ env.REGION }} \
             --allow-unauthenticated \
+            --service-account=${{ env.CUENTA_EDGE }} \
             --set-env-vars=APP_VERSION=${GITHUB_SHA::7},API_URL=${{ needs.api.outputs.url }}
 
       - name: La direccion publica

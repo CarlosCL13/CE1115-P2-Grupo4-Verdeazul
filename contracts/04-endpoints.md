@@ -114,9 +114,12 @@ cerrar, y eso se verifica en el servidor, no en el formulario.
 
 ## Autenticación
 
+**Estado:** implementado, con pruebas en `tests/identidad/`. Cómo usar la sesión
+desde los demás endpoints está en [05-sesion.md](05-sesion.md).
+
 **Dónde:** `services/api/app/auth/rutas.py`, `contrasenas.py`, `sesiones.py`, `totp.py`
-**Pantallas:** `services/edge/templates/auth/` (`entrar.html` ya existe)
-**Migración:** `db/migrations/0002_identidad.sql`
+**Pantallas:** `services/edge/templates/auth/`
+**Migración:** `db/migrations/003_cuentas.sql`, `004_identidad.sql` y `011_identidad_ajustes.sql`
 
 Estos cinco no son casillas de la matriz: no deciden qué puede hacer alguien,
 deciden **quién es**. Pero son los que más puntos protegen.
@@ -149,8 +152,8 @@ Ojo con la matriz aquí: la Dirección de Certificación **no** tiene acceso a O
 Es la casilla que más gente implementa mal, porque suena raro que una dirección
 no vea datos de clientes. Es a propósito: no los necesita para certificar.
 
-La búsqueda por cédula es la pregunta abierta número 3 del esquema. Hasta que se
-decida HMAC o hash simple, `cedula.py` no se puede escribir bien.
+La búsqueda por cédula quedó resuelta con HMAC con llave (`cedula.py`): se busca
+sin descifrar y un volcado de la base, solo, no permite recorrer las cédulas.
 
 ## O9 Cuentas, roles y permisos
 
@@ -164,8 +167,18 @@ decida HMAC o hash simple, `cedula.py` no se puede escribir bien.
 | `PATCH /cuentas/{id}` | Cambiar el rol o desactivar una cuenta | C10, bitácora | Matriz: separación de deberes |
 
 C10 es la condición que impide que el personal administrativo se dé permisos a sí
-mismo. Dónde vive esa aprobación previa es la pregunta abierta número 2 del
-esquema, y la respuesta cambia estos tres endpoints.
+mismo. La aprobación previa vive en la tabla `solicitudes_rol`, y para eso
+existen cuatro rutas más que no son casillas de la matriz:
+
+| Endpoint | Para qué sirve | Quién |
+|---|---|---|
+| `GET /solicitudes-rol` | Ver las solicitudes y su estado | PA, DG |
+| `POST /solicitudes-rol` | Pedir un alta, un cambio de rol o una baja | PA |
+| `POST /solicitudes-rol/{id}/aprobar` | Aprobar, con reautenticación | DG |
+| `POST /solicitudes-rol/{id}/rechazar` | Rechazar con motivo | DG |
+
+Más `GET /auth/sesion`, que le dice al borde quién es la persona y qué le
+falta (segundo factor, cambiar la clave temporal).
 
 ## O10 Credenciales propias
 

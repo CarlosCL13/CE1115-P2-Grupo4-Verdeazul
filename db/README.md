@@ -113,8 +113,33 @@ LLAVE_BUSQUEDA_CEDULA=lo-que-salio
 .venv/Scripts/python.exe db/migrar.py estado
 ```
 
-`estado` lista qué migraciones están aplicadas y cuáles faltan. Si las diez
+`estado` lista qué migraciones están aplicadas y cuáles faltan. Si las once
 aparecen con fecha, ya está.
+
+### 6. Credenciales de prueba
+
+Con la semilla cargada (`migrar.py semilla`), falta darle contraseña a las
+cuentas. Antes, agregá al `.env` la llave de cifrado, **la misma que está en
+Secret Manager** como `llave-cifrado-datos` (pedísela a quien la creó, o
+creala vos y subila con el mismo valor):
+
+```
+LLAVE_CIFRADO_DATOS=la-misma-de-secret-manager
+```
+
+```
+.venv/Scripts/python.exe db/credenciales_prueba.py
+```
+
+Genera una contraseña al azar para cada una de las once cuentas, activa el
+segundo factor de las que lo exigen (DG, DC, PA y verificadores), registra los
+datos personales de los dos dueños y lo imprime todo **una sola vez**.
+Guardalo en el gestor de contraseñas del grupo. Ninguna de esas credenciales
+va a un archivo del repositorio: una credencial versionada anula el criterio
+de secretos aunque sea de prueba.
+
+`db/credenciales_prueba.py dg pa` regenera solo esas dos, y `--sin-totp` las
+deja sin segundo factor para activarlo desde la pantalla, con el QR.
 
 Un archivo ya aplicado nunca se edita: `migrar.py` guarda su huella y se niega
 a seguir si cambió. Si algo está mal, se corrige con una migración nueva.

@@ -18,8 +18,8 @@ Desplegado en **https://verdeazul-edge-igwgmkeipa-uk.a.run.app**
 | Motor de políticas en Rego | Completo: 88 celdas y las condiciones C1 a C11 |
 | Pruebas de la matriz | 977, corren en cada pull request contra un OPA real |
 | Dependabot | Configurado para los cuatro componentes |
-| Autenticación | Sin empezar |
-| Endpoints de la matriz | 1 de 57 (`/salud`) |
+| Autenticación | Completa: Argon2id, sesión en la base, segundo factor TOTP, bloqueo RC-01, reautenticación |
+| Endpoints de la matriz | 14 de 57: `/salud` y los 13 de identidad (autenticación, O6, O9, O10) |
 | Firma de certificados | Sin empezar |
 | Transmisor de bitácora | Esqueleto que responde 501 |
 
@@ -28,6 +28,7 @@ Desplegado en **https://verdeazul-edge-igwgmkeipa-uk.a.run.app**
 ```
 contracts/                 Los acuerdos que permiten trabajar en paralelo
   matriz.md                La matriz de la Parte 1 transcrita: 88 celdas
+  05-sesion.md             Cómo usa cada endpoint la sesión y el motor
 db/
   migrations/              Esquema de verdeazul-app
   bitacora/                Esquema de verdeazul-bitacora, instancia separada
@@ -39,6 +40,7 @@ services/
   policies/                Motor de políticas en Rego (PDP)
   transmisor/              Bandeja de salida a bitácora y trabajos programados
 tests/matriz/              Una prueba por celda: la tabla de cobertura
+tests/identidad/           Contraseñas, sesión, segundo factor, C10 y datos personales
 .github/
   workflows/               Integración continua y despliegue
   dependabot.yml           Revisión semanal de dependencias
@@ -104,7 +106,44 @@ Despliega dos servicios en `us-east4`, proyecto `verdeazul-g4`:
 | `verdeazul-api` | `api` y `policies`, que comparten red | Solo con credencial de Google |
 
 El backend no acepta invocaciones anónimas. Esa es la frontera de confianza F2
-del diseño.
+del diseño. El borde lo invoca con su propia cuenta de servicio,
+`verdeazul-edge`, cuyo único permiso es ese.
+
+### Configuración de una sola vez para identidad
+
+Antes del primer despliegue con identidad hay que crear dos cosas en Google
+Cloud. Las dos se hacen una vez y no viven en el repositorio.
+
+La llave de cifrado de datos personales. Se genera, se guarda en el `.env` de
+quien vaya a cargar las credenciales de prueba, y se sube con el **mismo
+valor**:
+
+```bash
+python -c "import secrets; print(secrets.token_urlsafe(32))"
+# copiar el valor al .env como LLAVE_CIFRADO_DATOS=... y luego:
+printf '%s' 'EL-VALOR' | gcloud secrets create llave-cifrado-datos \
+  --project=verdeazul-g4 --replication-policy=automatic --data-file=-
+gcloud secrets add-iam-policy-binding llave-cifrado-datos --project=verdeazul-g4 \
+  --member=serviceAccount:verdeazul-api@verdeazul-g4.iam.gserviceaccount.com \
+  --role=roles/secretmanager.secretAccessor
+```
+
+La cuenta de servicio del borde, con permiso de invocar al backend y nada más,
+y el permiso para que el despliegue la use:
+
+```bash
+gcloud iam service-accounts create verdeazul-edge --project=verdeazul-g4 \
+  --display-name="Borde de Verdeazul"
+gcloud run services add-iam-policy-binding verdeazul-api --project=verdeazul-g4 \
+  --region=us-east4 --role=roles/run.invoker \
+  --member=serviceAccount:verdeazul-edge@verdeazul-g4.iam.gserviceaccount.com
+gcloud iam service-accounts add-iam-policy-binding \
+  verdeazul-edge@verdeazul-g4.iam.gserviceaccount.com --project=verdeazul-g4 \
+  --role=roles/iam.serviceAccountUser \
+  --member=serviceAccount:ci-despliegue@verdeazul-g4.iam.gserviceaccount.com
+```
+
+Y la migración nueva en Neon: `python db/migrar.py app` aplica la 011.
 
 Las imágenes llevan como etiqueta los primeros siete caracteres del commit.
 `latest` no se usa, porque se mueve y no permite saber qué está corriendo ni a
@@ -114,7 +153,7 @@ qué versión volver.
 
 Ninguna credencial vive en el repositorio, en las imágenes ni en el Dockerfile. Se guardan en Secret Manager y Cloud Run las inyecta como variables de entorno con `--set-secrets`, de modo que la configuración de la revisión guarda una referencia al secreto y no su valor.
 
-Hoy hay tres: la cadena de conexión de la base principal (`verdeazul-db-url`), la de lectura de la bitácora (`verdeazul-bitacora-lectura-url`) y la llave del HMAC de búsqueda de cédulas (`llave-busqueda-cedula`). Faltan la llave privada de firma de certificados y la del HMAC de la cadena de la bitácora, que llegan con esas dos piezas.
+Hoy hay cuatro: la cadena de conexión de la base principal (`verdeazul-db-url`), la de lectura de la bitácora (`verdeazul-bitacora-lectura-url`), la llave del HMAC de búsqueda de cédulas (`llave-busqueda-cedula`) y la llave AES-256-GCM con la que se cifran cédula, teléfono y secreto TOTP (`llave-cifrado-datos`). Faltan la llave privada de firma de certificados y la del HMAC de la cadena de la bitácora, que llegan con esas dos piezas, y con ellas son seis, el tope de la capa gratuita.
 
 El backend corre con su propia cuenta de servicio, que solo puede leer esos secretos. Sin ella, Cloud Run usaría la cuenta por omisión de Compute, que tiene permisos de Editor sobre todo el proyecto.
 
