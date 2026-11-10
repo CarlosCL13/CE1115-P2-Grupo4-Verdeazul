@@ -10,7 +10,7 @@ A, D, Ab, Cr, Em, An, X  →  POST /recurso/{id}/accion
 
 Son 57 endpoints. Solo dos responden sin sesión: `/salud` y la verificación
 pública de certificados. Todos los demás exigen sesión válida y llaman a
-`puede()` antes de hacer cualquier cosa.
+`servicio_consulta_autorizacion()` (contrato 02) antes de hacer cualquier cosa.
 
 ## Lo que cubre todo endpoint, sin repetirlo en cada fila
 
@@ -37,10 +37,8 @@ implementar, así que la cuenta de endpoints es la cuenta de puntos.
 
 **O4 enmiendas pasó de la persona 4 a la persona 1.** La 4 tenía 21 endpoints y
 la 1 tenía nueve. Enmiendas es lo más separable del flujo porque va al final: no
-hay nada después que dependa de ella. El costo es que ahora la persona 1 depende
-de las tablas de la 4 (`periodo` para C11 y `medicion` para C5), así que no
-puede arrancar O4 hasta que esa migración esté aplicada. Si eso la bloquea,
-trabaja contra el contrato del esquema como todos los demás.
+hay nada después que dependa de ella. O4 depende de `periodos_medicion` (C11) y
+`mediciones` (C5), y las dos ya están aplicadas.
 
 ---
 
@@ -61,11 +59,11 @@ prueba que el despliegue existe. Ya está escrito.
 
 **Dónde:** `services/api/app/concesiones/rutas.py`
 **Pantallas:** `services/edge/templates/concesiones/`
-**Migración:** `db/migrations/00XX_concesiones.sql`
+**Migración:** `db/migrations/007_atributos.sql`
 
 | Endpoint | Para qué sirve | Necesita | Cubre |
 |---|---|---|---|
-| `GET /consentimientos` | La Dirección General y el personal administrativo ven qué autorizaciones existen | tabla `consentimiento` | — |
+| `GET /consentimientos` | La Dirección General y el personal administrativo ven qué autorizaciones existen | tabla `consentimientos` | — |
 | `GET /consentimientos/{id}` | El dueño de finca consulta lo que él mismo autorizó | C8 en el motor | — |
 | `POST /consentimientos` | El dueño autoriza a un tercero a ver sus certificados; el administrativo lo registra por él | C8, evento de bitácora | Correspondencia P1 7 |
 | `PATCH /consentimientos/{id}` | El dueño revoca o cambia el alcance de lo que autorizó | C8, evento de bitácora | — |
@@ -81,7 +79,7 @@ casilla del tercero no tiene de dónde leer.
 
 | Endpoint | Para qué sirve | Necesita | Cubre |
 |---|---|---|---|
-| `GET /asignaciones` | Ver qué técnico atiende qué zona | tabla `asignacion` | — |
+| `GET /asignaciones` | Ver qué técnico atiende qué zona | tabla `asignaciones_zona` | — |
 | `GET /asignaciones/{id}` | El técnico y el verificador ven su propia asignación | C1 en el motor | — |
 | `POST /asignaciones` | La Dirección de Certificación asigna un técnico a una zona, con fecha de vencimiento | evento de bitácora | — |
 | `PATCH /asignaciones/{id}` | Cambiar la zona o extender el vencimiento | evento de bitácora | — |
@@ -94,13 +92,13 @@ vez. El vencimiento lo revisa `POST /tareas/vencer` de la persona 5 (HBAC-03).
 
 **Dónde:** `services/api/app/enmiendas/rutas.py`, `estados.py`
 **Pantallas:** `services/edge/templates/enmiendas/`
-**Migración:** `db/migrations/00XX_enmiendas.sql`
+**Migración:** `db/migrations/008_enmiendas.sql`
 
 | Endpoint | Para qué sirve | Necesita | Cubre |
 |---|---|---|---|
-| `GET /enmiendas` | La dirección y el verificador ven las enmiendas pendientes | tabla `enmienda` | — |
+| `GET /enmiendas` | La dirección y el verificador ven las enmiendas pendientes | tabla `enmiendas` | — |
 | `GET /enmiendas/{id}` | Técnico (su zona), auditor y dueño ven una enmienda | C1, C7, C8 | — |
-| `POST /enmiendas` | El técnico pide corregir una medición ya registrada | C11: solo en período abierto | — |
+| `POST /enmiendas` | El técnico pide corregir una medición suya | **C11**: solo con el período cerrado | — |
 | `POST /enmiendas/{id}/aprobar` | El verificador acepta la corrección | C4, reautenticación, bitácora | — |
 | `POST /enmiendas/{id}/devolver` | El verificador la rechaza con observaciones | C4, bitácora | — |
 | `POST /enmiendas/{id}/cerrar` | La Dirección de Certificación la cierra definitivamente | **C5**, bitácora | Matriz: separación de deberes |
@@ -127,7 +125,7 @@ deciden **quién es**. Pero son los que más puntos protegen.
 |---|---|---|---|
 | `POST /auth/entrar` | Verificar la contraseña contra el hash y abrir sesión | Argon2id, lista de prohibidas, bloqueo por intentos | **2.3.1** — sin esto se pierde la mitad de los 25 |
 | `POST /auth/salir` | Cerrar sesión e invalidar la cookie | — | — |
-| `POST /auth/totp/activar` | Dar de alta el segundo factor con un código QR | tabla `credencial` | Correspondencia P1 7 |
+| `POST /auth/totp/activar` | Dar de alta el segundo factor con un código QR | tabla `credenciales` | Correspondencia P1 7 |
 | `POST /auth/totp/verificar` | Pedir el código de seis dígitos a quien aprueba, emite o cambia permisos | reloj con tolerancia | Correspondencia P1 7 |
 | `POST /auth/reautenticar` | Volver a pedir la contraseña antes de una acción grave | — | Correspondencia P1 7 |
 
@@ -213,18 +211,17 @@ tiempo, se quita sin consecuencias.
 
 **Dónde:** `services/api/app/certificacion/rutas.py`, `consultas.py`
 **Pantallas:** `services/edge/templates/certificacion/`
-**Migración:** `db/migrations/0001_fincas.sql`
+**Migración:** `db/migrations/005_fincas_periodos.sql` y `006_mediciones.sql`
 
 | Endpoint | Para qué sirve | Necesita | Cubre |
 |---|---|---|---|
-| `GET /fincas` | Listar las fincas registradas | tabla `finca` con `geometry(Polygon, 4326)` | — |
+| `GET /fincas` | Listar las fincas registradas | tabla `fincas` con `geometry(Polygon, 4326)` | — |
 | `GET /fincas/{id}` | Técnico (su zona), auditor (su alcance) y dueño (la suya) ven una finca | C1, C7, C8 | — |
 | `POST /fincas` | El administrativo registra una finca con su polígono | índice GiST | Correspondencia P1 7 |
 | `PATCH /fincas/{id}` | Corregir linderos o datos de la finca | bitácora | — |
 
-La tabla `finca` es la primera migración del proyecto y la que más gente espera.
-El polígono y el índice GiST tienen que estar desde el principio, porque C6 de la
-persona 5 depende de ellos.
+La tabla `fincas` ya está aplicada en `005_fincas_periodos.sql`, con el
+polígono y el índice GiST de los que depende C6 de la persona 5.
 
 ## O2 Períodos de medición
 
@@ -233,7 +230,7 @@ persona 5 depende de ellos.
 
 | Endpoint | Para qué sirve | Necesita | Cubre |
 |---|---|---|---|
-| `GET /periodos` | Ver los períodos y su estado. Siete de los ocho roles pueden | tabla `periodo` | — |
+| `GET /periodos` | Ver los períodos y su estado. Siete de los ocho roles pueden | tabla `periodos_medicion` | — |
 | `GET /periodos/{id}` | Ver un período concreto | — | — |
 | `POST /periodos/{id}/abrir` | La Dirección de Certificación habilita el registro de mediciones | bitácora | — |
 | `POST /periodos/{id}/cerrar` | Cerrarlo cuando no quedan mediciones sin aprobar | bitácora | — |
@@ -248,7 +245,7 @@ políticas en Rego de la persona 3 y los endpoints de O4 de la persona 1.
 
 | Endpoint | Para qué sirve | Necesita | Cubre |
 |---|---|---|---|
-| `GET /mediciones` | Ver las mediciones de un período | tabla `medicion` | — |
+| `GET /mediciones` | Ver las mediciones de un período | tabla `mediciones` | — |
 | `GET /mediciones/{id}` | Técnico, auditor y dueño ven una medición | C1, C7, C8 | — |
 | `POST /mediciones` | El técnico registra cuánta biomasa midió | **C2**: período abierto | — |
 | `POST /mediciones/{id}/aprobar` | El verificador la acepta | **C3**: no puede ser quien la registró. Reautenticación, bitácora | Matriz: separación de deberes |
@@ -266,11 +263,11 @@ registre y apruebe su propia medición. Es la casilla que hay que saber defender
 
 **Dónde:** `services/api/app/certificados/rutas.py`, `firma.py`, `verificacion.py`
 **Pantallas:** `services/edge/templates/certificados/` y el inicio público
-**Migración:** `db/migrations/00XX_certificados.sql`
+**Migración:** `db/migrations/009_certificados.sql`
 
 | Endpoint | Para qué sirve | Necesita | Cubre |
 |---|---|---|---|
-| `GET /certificados` | Ver los certificados emitidos | tabla `certificado` | — |
+| `GET /certificados` | Ver los certificados emitidos | tabla `certificados` | — |
 | `GET /certificados/{id}` | El dueño ve los suyos; el tercero ve los que le autorizaron | C8, **C9** (lee O7) | — |
 | `POST /certificados/{id}/emitir` | El verificador emite y **firma** el certificado | **C6**: `ST_Intersects` más `pg_advisory_xact_lock`. Clave privada en Secret Manager. Reautenticación | **Certificados 15, 2.3.6** |
 | `POST /certificados/{id}/anular` | La Dirección de Certificación anula uno emitido | bitácora | — |
@@ -289,7 +286,7 @@ Verdeazul por un canal aparte.
 ## O11 Bitácora de auditoría
 
 **Dónde:** `services/api/app/bitacora/registrar.py`, `cadena.py`, `rutas.py`
-**Migración:** `db/bitacora/0001_bitacora.sql` y `db/migrations/00XX_bandeja_salida.sql`
+**Migración:** `db/bitacora/001_bitacora.sql` y `db/migrations/010_salida.sql`
 
 | Endpoint | Para qué sirve | Necesita | Cubre |
 |---|---|---|---|
