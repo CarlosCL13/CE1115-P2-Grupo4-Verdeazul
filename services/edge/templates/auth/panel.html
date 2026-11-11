@@ -52,6 +52,17 @@
 </ul>
 {% endif %}
 
+{% if sesion.rol in ('DIRECCION_GENERAL', 'DIRECCION_CERTIFICACION', 'PERSONAL_ADMINISTRATIVO', 'TECNICO_CAMPO', 'VERIFICADOR', 'AUDITOR_EXTERNO', 'DUENO_FINCA') %}
+<h2>Certificación</h2>
+<ul>
+  <li><a href="/fincas">Fincas</a></li>
+  {% if sesion.rol != 'PERSONAL_ADMINISTRATIVO' %}
+    <li><a href="/periodos">Períodos de medición</a></li>
+    <li><a href="/mediciones">Mediciones de biomasa</a></li>
+  {% endif %}
+</ul>
+{% endif %}
+
 <h2>Certificados</h2>
 <ul>
   <li><a href="/">Verificar un certificado</a></li>

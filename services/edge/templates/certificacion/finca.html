@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block titulo %}{{ finca.nombre }} · Verdeazul Carbono{% endblock %}
+
+{% block contenido %}
+<h1>{{ finca.nombre }}</h1>
+
+{% if error %}<p class="error">{{ error }}</p>{% endif %}
+{% if corregida %}<p class="nota">Los datos de la finca quedaron corregidos.</p>{% endif %}
+
+<table>
+  <tbody>
+    <tr><th>Zona</th><td>{{ finca.zona }}</td></tr>
+    <tr><th>Dueño (cuenta)</th><td>{{ finca.propietario }}</td></tr>
+    <tr><th>Registrada</th><td>{{ finca.registrada_en[:10] }}</td></tr>
+    <tr><th>Polígono</th><td><pre>{{ anillo }}</pre></td></tr>
+  </tbody>
+</table>
+
+{% if sesion and sesion.rol == 'PERSONAL_ADMINISTRATIVO' %}
+<h2>Corregir datos</h2>
+<form method="post" action="/fincas/{{ finca.id }}/editar">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+
+  <label for="nombre">Nombre</label>
+  <input type="text" id="nombre" name="nombre" value="{{ finca.nombre }}" maxlength="120">
+
+  <label for="zona">Zona</label>
+  <input type="text" id="zona" name="zona" value="{{ finca.zona }}" maxlength="8">
+
+  <label for="poligono">Polígono, un punto por línea: longitud, latitud</label>
+  <textarea id="poligono" name="poligono" rows="6">{{ anillo }}</textarea>
+
+  <button type="submit">Guardar</button>
+</form>
+{% endif %}
+
+<p><a href="/fincas">Volver a las fincas</a> · <a href="/mediciones?finca={{ finca.id }}">Ver sus mediciones</a></p>
+{% endblock %}

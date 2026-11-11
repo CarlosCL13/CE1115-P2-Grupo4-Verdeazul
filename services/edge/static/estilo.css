@@ -51,7 +51,7 @@ table form { max-width: none; }
 
 label { font-size: 0.85rem; color: var(--apagado); }
 
-input {
+input, textarea {
   padding: 0.5rem 0.6rem;
   border: 1px solid var(--borde);
   border-radius: 3px;
@@ -101,3 +101,7 @@ ul.codigos { columns: 2; font-size: 1.05rem; }
 table input { width: 8rem; padding: 0.25rem 0.4rem; font-size: 0.85rem; }
 td form.en-linea + form.en-linea { margin-top: 0.3rem; }
 td:last-child { white-space: nowrap; }
+
+/* Certificacion */
+textarea { font-family: ui-monospace, monospace; }
+pre { margin: 0; font-size: 0.85rem; }

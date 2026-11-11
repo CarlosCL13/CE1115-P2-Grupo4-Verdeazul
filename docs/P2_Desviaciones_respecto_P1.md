@@ -26,6 +26,8 @@ El modelo de control de acceso no cambia. Los ocho roles, los once objetos, las 
 | D-14 | El aviso al titular de RC-01 no llega por correo | Alcance |
 | D-15 | Las solicitudes de cambio de cuenta tienen dueño fuera de la matriz | Hueco del diseño |
 | D-16 | Las cuentas nuevas nacen con una contraseña temporal | Hueco del diseño |
+| D-17 | Un período se crea abriéndolo, y `/abrir` reabre uno cerrado | Hueco del diseño |
+| D-18 | El técnico solo registra mediciones en su zona | Refuerzo de la matriz |
 
 ## D-01. La plataforma de alojamiento es software propietario
 
@@ -162,6 +164,20 @@ Al aplicar un cambio de rol se revocan las asignaciones de zona de la cuenta, po
 P1 no dijo cómo recibe alguien su primera contraseña. Con Keycloak eso lo resolvía el correo de activación. Aquí el Personal Administrativo, al aplicar el alta, recibe una contraseña temporal aleatoria de 20 caracteres que se muestra una sola vez y que entrega a la persona.
 
 La cuenta nace marcada con `debe_cambiar`. Con la contraseña temporal se puede entrar, pero la sesión solo sirve para activar el segundo factor (si el rol lo exige) y cambiarla. El administrativo conoce la temporal pero no la definitiva, y tampoco tiene el segundo factor, así que no puede usar la cuenta que creó.
+
+## D-17. Un período se crea abriéndolo
+
+La matriz le da a Dirección de Certificación las operaciones Ab (abrir) y Cr (cerrar) sobre O2, y el contrato 04 listaba `POST /periodos/{id}/abrir`. Pero un período no se puede abrir si no existe, y ningún endpoint lo creaba.
+
+`POST /periodos` crea un período nuevo y nace ABIERTO, bajo la operación Ab. `POST /periodos/{id}/abrir` queda para reabrir uno cerrado, y falla con 409 si ya está abierto. Las dos piden reautenticación (Tabla 7.1 de P1), igual que cerrar. Cerrar solo se permite cuando no quedan mediciones REGISTRADAS en el período. Las DEVUELTAS no cuentan, porque su autor no puede corregirlas (no se modifican, se enmiendan) y esperarlas bloquearía el cierre para siempre.
+
+Ninguna celda de la matriz cambia, y la operación sigue siendo Ab para el mismo rol. La implicación es que reabrir un período cerrado vuelve a habilitar C2 y deja de cumplirse C11 mientras tanto, así que quien lo reabre tiene que saber que hay enmiendas en curso. Queda registrado como `PERIODO_ABIERTO` en la bitácora, con la etiqueta.
+
+## D-18. El técnico solo registra mediciones en su zona
+
+La matriz le da al Técnico de campo C sobre O3 con la condición C2 (período abierto) y no menciona C1. Leída literal, un técnico podría registrar una medición de una finca de una zona que no tiene asignada, y solo el verificador lo vería después.
+
+Lo reforzamos. Al registrar, el servidor además le pregunta al motor si el técnico puede leer esa finca (L sobre O1, que sí lleva C1), y si no, niega y registra el intento. No amplía ningún permiso, solo agrega una restricción, que es la dirección que la matriz permite (ABAC quita permisos, nunca los agrega). La implicación de seguridad es que una cuenta de técnico comprometida no puede inyectar mediciones en fincas ajenas.
 
 ## Decisiones aún abiertas
 
