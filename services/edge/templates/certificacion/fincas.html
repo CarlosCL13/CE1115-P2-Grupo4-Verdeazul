@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block titulo %}Fincas · Verdeazul Carbono{% endblock %}
+
+{% block contenido %}
+<h1>Catálogo de fincas</h1>
+
+{% if error %}<p class="error">{{ error }}</p>{% endif %}
+
+<table>
+  <thead><tr><th>Nombre</th><th>Zona</th><th>Dueño (cuenta)</th><th></th></tr></thead>
+  <tbody>
+    {% for f in fincas %}
+      <tr>
+        <td>{{ f.nombre }}</td>
+        <td>{{ f.zona }}</td>
+        <td>{{ f.propietario }}</td>
+        <td><a href="/fincas/{{ f.id }}">Ver</a></td>
+      </tr>
+    {% else %}
+      <tr><td colspan="4">No hay fincas que su rol pueda ver.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<p class="nota">
+  Cada rol ve solo lo que la matriz le concede. El técnico y el verificador,
+  las fincas de su zona (C1). El auditor, solo dentro de su ventana (C7). El
+  dueño, solo la suya (C8).
+</p>
+
+{# El formulario se ofrece solo al administrativo, pero quien decide es el
+   backend: otro rol que lo enviara recibiria 403. #}
+{% if sesion and sesion.rol == 'PERSONAL_ADMINISTRATIVO' %}
+<h2>Registrar una finca</h2>
+{% set v = valores or {} %}
+<form method="post" action="/fincas">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+
+  <label for="nombre">Nombre</label>
+  <input type="text" id="nombre" name="nombre" value="{{ v.nombre or '' }}"
+         maxlength="120" required>
+
+  <label for="zona">Zona (código, por ejemplo PN)</label>
+  <input type="text" id="zona" name="zona" value="{{ v.zona or '' }}"
+         maxlength="8" required>
+
+  <label for="propietario">Cuenta del dueño (el número que aparece en Datos personales)</label>
+  <input type="number" id="propietario" name="propietario"
+         value="{{ v.propietario or '' }}" min="1" required>
+
+  <label for="poligono">Polígono, un punto por línea: longitud, latitud</label>
+  <textarea id="poligono" name="poligono" rows="6" required
+            placeholder="-85.70, 10.60&#10;-85.60, 10.60&#10;-85.60, 10.70&#10;-85.70, 10.70">{{ v.poligono or '' }}</textarea>
+
+  <button type="submit">Registrar</button>
+</form>
+<p class="nota">
+  El anillo se cierra solo. El servidor valida el polígono con PostGIS y
+  rechaza, por ejemplo, uno que se cruza a sí mismo.
+</p>
+{% endif %}
+{% endblock %}

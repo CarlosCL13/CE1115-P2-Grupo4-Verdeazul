@@ -3,46 +3,72 @@
 {% block titulo %}Mediciones · Verdeazul Carbono{% endblock %}
 
 {% block contenido %}
-<h1>Mediciones de {{ finca.nombre }}</h1>
+<h1>Mediciones de biomasa</h1>
 
-<p class="nota">
-  Período {{ periodo.nombre }} · estado <strong>{{ periodo.estado }}</strong>
-</p>
+{% if error %}<p class="error">{{ error }}</p>{% endif %}
 
 <table>
   <thead>
-    <tr><th>Fecha</th><th>Biomasa</th><th>Autor</th><th>Estado</th><th></th></tr>
+    <tr><th>Finca</th><th>Período</th><th>Biomasa</th><th>Autor</th><th>Estado</th><th></th></tr>
   </thead>
   <tbody>
     {% for m in mediciones %}
       <tr>
-        <td>{{ m.fecha }}</td>
-        <td>{{ m.biomasa }} t</td>
-        <td>{{ m.autor_nombre }}</td>
-        <td>{{ m.estado }}</td>
+        <td><a href="/fincas/{{ m.finca }}">{{ m.finca }}</a></td>
+        <td>{{ m.periodo_etiqueta }}</td>
+        <td>{{ m.biomasa_toneladas }} t</td>
+        <td>{{ m.autor }}</td>
+        <td>{{ m.estado }}{% if m.motivo_devolucion %}<br><span class="nota">{{ m.motivo_devolucion }}</span>{% endif %}</td>
         <td>
-          {# El backend ya decidio esto llamando a puede(). La interfaz solo
-             dibuja lo que el backend declara permitido: esconder el boton es
-             comodidad, no un control. El servidor rechaza igual. #}
-          {% if "A" in m.permisos %}
-            <form method="post" action="/mediciones/{{ m.id }}/aprobar">
+          {# Comodidad, no control. El servidor decide con C3: nadie aprueba
+             lo que midio, y si lo intenta recibe 403 y queda en la bitacora. #}
+          {% if sesion and sesion.rol == 'VERIFICADOR' and m.estado == 'REGISTRADA' %}
+            <form method="post" action="/mediciones/{{ m.id }}/aprobar" class="en-linea">
+              <input type="hidden" name="csrf" value="{{ csrf }}">
               <button>Aprobar</button>
+            </form>
+            <form method="post" action="/mediciones/{{ m.id }}/devolver" class="en-linea">
+              <input type="hidden" name="csrf" value="{{ csrf }}">
+              <input type="text" name="motivo" placeholder="Motivo" maxlength="500" required>
+              <button>Devolver</button>
             </form>
           {% endif %}
         </td>
       </tr>
     {% else %}
-      <tr><td colspan="5">No hay mediciones en este período.</td></tr>
+      <tr><td colspan="6">No hay mediciones que su rol pueda ver.</td></tr>
     {% endfor %}
   </tbody>
 </table>
 
-{% if periodo.estado == "ABIERTO" and "C" in permisos_objeto %}
-  <h2>Registrar una medición</h2>
-  <form method="post" action="/mediciones">
-    <label for="biomasa">Biomasa estimada (toneladas)</label>
-    <input type="number" id="biomasa" name="biomasa" step="0.01" min="0" required>
-    <button type="submit">Registrar</button>
-  </form>
+<p class="nota">
+  Una medición no se modifica. Si ya fue decidida y hay que corregirla, se
+  hace con una enmienda.
+</p>
+
+{% if sesion and sesion.rol == 'AUDITOR_EXTERNO' %}
+  <p><a href="/mediciones/exportar">Descargar las mediciones (CSV)</a></p>
+{% endif %}
+
+{% if fincas and abiertos %}
+<h2>Registrar una medición</h2>
+<form method="post" action="/mediciones">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+
+  <label for="finca">Finca</label>
+  <select id="finca" name="finca" required>
+    {% for f in fincas %}<option value="{{ f.id }}">{{ f.nombre }} ({{ f.zona }})</option>{% endfor %}
+  </select>
+
+  <label for="periodo">Período abierto</label>
+  <select id="periodo" name="periodo" required>
+    {% for p in abiertos %}<option value="{{ p.id }}">{{ p.etiqueta }}</option>{% endfor %}
+  </select>
+
+  <label for="biomasa">Biomasa estimada (toneladas, hasta tres decimales)</label>
+  <input type="text" id="biomasa" name="biomasa" inputmode="decimal" maxlength="20" required>
+
+  <button type="submit">Registrar</button>
+</form>
 {% endif %}
 {% endblock %}
