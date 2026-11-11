@@ -32,7 +32,7 @@ implementar, así que la cuenta de endpoints es la cuenta de puntos.
 | Persona 1 | plataforma, O7, O8, **O4** | 16 |
 | Persona 2 | autenticación, O6, O9, O10 | 14 |
 | Persona 3 | el motor que llaman los otros 56 | 1 |
-| Persona 4 | O1, O2, O3 | 14 |
+| Persona 4 | O1, O2, O3 | 14 (15 con `POST /periodos`, D-17) |
 | Persona 5 | O5, O11, transmisor | 12 |
 
 **O4 enmiendas pasó de la persona 4 a la persona 1.** La 4 tenía 21 endpoints y
@@ -220,6 +220,13 @@ tiempo, se quita sin consecuencias.
 
 # Persona 4 — O1, O2, O3
 
+**Implementado.** El módulo vive en `services/api/app/certificacion/` y sus
+pruebas en `tests/certificacion/`. Todo id que va al motor viaja como texto.
+`GET /mediciones/exportar` se declara antes que `GET /mediciones/{id}`, para
+que "exportar" no se tome por un id. Una finca o medición que no existe
+responde 403 y no 404 a quien no puede verlas todas, para que nadie averigüe
+qué ids existen comparando respuestas.
+
 ## O1 Catálogo de fincas
 
 **Dónde:** `services/api/app/certificacion/rutas.py`, `consultas.py`
@@ -239,13 +246,14 @@ polígono y el índice GiST de los que depende C6 de la persona 5.
 ## O2 Períodos de medición
 
 **Dónde:** `services/api/app/certificacion/rutas.py`, `estados.py`
-**Migración:** `db/migrations/0003_periodos.sql`
+**Migración:** `db/migrations/005_fincas_periodos.sql`
 
 | Endpoint | Para qué sirve | Necesita | Cubre |
 |---|---|---|---|
-| `GET /periodos` | Ver los períodos y su estado. Siete de los ocho roles pueden | tabla `periodos_medicion` | — |
+| `GET /periodos` | Ver los períodos y su estado. Seis de los ocho roles pueden (la matriz da `—` al administrativo y al tercero) | tabla `periodos_medicion` | — |
 | `GET /periodos/{id}` | Ver un período concreto | — | — |
-| `POST /periodos/{id}/abrir` | La Dirección de Certificación habilita el registro de mediciones | bitácora | — |
+| `POST /periodos` | La Dirección de Certificación abre un período nuevo. Nace ABIERTO. Reautenticación, bitácora | Ab | D-17 |
+| `POST /periodos/{id}/abrir` | Reabrir un período cerrado. Reautenticación, bitácora | Ab | D-17 |
 | `POST /periodos/{id}/cerrar` | Cerrarlo cuando no quedan mediciones sin aprobar | bitácora | — |
 
 `periodo.estado` es lo que miran C2 y C11. Si cambia de nombre, cambian las
@@ -254,16 +262,16 @@ políticas en Rego de la persona 3 y los endpoints de O4 de la persona 1.
 ## O3 Mediciones de biomasa
 
 **Dónde:** `services/api/app/certificacion/rutas.py`, `estados.py`
-**Migración:** `db/migrations/0004_mediciones.sql`
+**Migración:** `db/migrations/006_mediciones.sql`
 
 | Endpoint | Para qué sirve | Necesita | Cubre |
 |---|---|---|---|
 | `GET /mediciones` | Ver las mediciones de un período | tabla `mediciones` | — |
 | `GET /mediciones/{id}` | Técnico, auditor y dueño ven una medición | C1, C7, C8 | — |
-| `POST /mediciones` | El técnico registra cuánta biomasa midió | **C2**: período abierto | — |
+| `POST /mediciones` | El técnico (y el verificador) registra cuánta biomasa midió | **C2**: período abierto. El técnico además en su zona (D-18) | — |
 | `POST /mediciones/{id}/aprobar` | El verificador la acepta | **C3**: no puede ser quien la registró. Reautenticación, bitácora | Matriz: separación de deberes |
 | `POST /mediciones/{id}/devolver` | El verificador la rechaza con observaciones | C3, bitácora | — |
-| `GET /mediciones/exportar` | El auditor externo se lleva las mediciones de su alcance | C7, formato acordado | Informe 10 |
+| `GET /mediciones/exportar` | El auditor externo se lleva las mediciones en CSV (`id, finca, periodo, autor, biomasa_toneladas, estado, registrada_en`) | C7 | Informe 10 |
 
 C3 es la separación de deberes central del sistema: impide que una sola persona
 registre y apruebe su propia medición. Es la casilla que hay que saber defender.

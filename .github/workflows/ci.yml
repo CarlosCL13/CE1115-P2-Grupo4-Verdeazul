@@ -134,6 +134,12 @@ jobs:
       - name: Pruebas de identidad
         run: pytest tests/identidad -v -rs
 
+      # Misma base y mismo motor. Fincas, periodos y mediciones: C1, C2, C3,
+      # C7 y C8 contra el OPA real, y la inmutabilidad de las mediciones
+      # contra los permisos reales de app_rw.
+      - name: Pruebas de certificacion
+        run: pytest tests/certificacion -v -rs
+
   politicas:
     name: Politicas en Rego
     runs-on: ubuntu-latest
