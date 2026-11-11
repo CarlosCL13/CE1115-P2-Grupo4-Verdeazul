@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block titulo %}Códigos de recuperación · Verdeazul Carbono{% endblock %}
+
+{% block contenido %}
+<h1>Segundo factor activado</h1>
+
+{% if codigos %}
+  <p>
+    Guarde estos códigos de recuperación en un lugar seguro, fuera del
+    teléfono. Si pierde el teléfono, cada uno le permite entrar una sola vez.
+    <strong>No se vuelven a mostrar.</strong>
+  </p>
+  <ul class="codigos">
+    {% for c in codigos %}<li><code>{{ c }}</code></li>{% endfor %}
+  </ul>
+{% endif %}
+
+<p><a href="{{ siguiente }}">Continuar</a></p>
+{% endblock %}

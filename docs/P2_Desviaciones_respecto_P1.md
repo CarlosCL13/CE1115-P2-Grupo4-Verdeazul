@@ -22,6 +22,10 @@ El modelo de control de acceso no cambia. Los ocho roles, los once objetos, las 
 | D-10 | Firma digital de certificados, que P1 no diseñó | Enunciado P2 §2.2 |
 | D-11 | Los trabajos programados se consolidan en un solo punto de entrada | Capa gratuita de Cloud Scheduler |
 | D-12 | El conjunto de herramientas de análisis se reduce | Tiempo disponible |
+| D-13 | El segundo factor es obligatorio solo para cuatro roles | Decisión del equipo |
+| D-14 | El aviso al titular de RC-01 no llega por correo | Alcance |
+| D-15 | Las solicitudes de cambio de cuenta tienen dueño fuera de la matriz | Hueco del diseño |
+| D-16 | Las cuentas nuevas nacen con una contraseña temporal | Hueco del diseño |
 
 ## D-01. La plataforma de alojamiento es software propietario
 
@@ -122,6 +126,42 @@ Cada ficha de tecnología de P1 listaba herramientas de análisis: Bandit, Semgr
 Se mantienen tres. Dependabot, que el enunciado exige y que cubre lo que hacían pip-audit y la revisión de dependencias de npm. Un detector de secretos en el repositorio, porque una credencial versionada anula por completo el criterio de gestión de secretos del enunciado y porque el historial de git conserva lo que se borra. Y las pruebas automatizadas de autorización por cada celda de la matriz, que P1 ya exigía y que son la evidencia de la tabla de cobertura.
 
 Las demás quedan documentadas como pendientes para una operación real.
+
+## D-13. El segundo factor es obligatorio solo para cuatro roles
+
+La Tabla 7.1 del Informe de políticas pedía segundo factor a los ocho perfiles, con llave de acceso preferida y TOTP como alternativa. D-05 ya explica por qué no hay llaves de acceso. Esta desviación es la otra mitad.
+
+El segundo factor es obligatorio para Dirección General, Dirección de Certificación, Personal Administrativo y Verificador, que son los roles que aprueban, emiten o cambian permisos. Sin él no pasan de la pantalla de activación, que es lo que CU-04 pedía ("antes del primer uso registra su segundo factor"). Para técnico de campo, auditor externo, dueño de finca y tercero autorizado es opcional, y una vez que alguien lo activa se le pide siempre.
+
+La razón es el uso real. El técnico trabaja en campo con conexión irregular, y el dueño y el tercero son externos que entran pocas veces al año. La implicación es que en esos cuatro roles una contraseña filtrada basta para entrar (AE-02). Lo acotan la lista de contraseñas prohibidas y la consulta a filtraciones conocidas de CO-02, el bloqueo de RC-01, y que esos roles solo leen lo suyo: ninguno aprueba, emite ni cambia permisos.
+
+Lo que sí se conserva de la Tabla 7.1 es el cierre por inactividad de cada perfil (15, 30 y 60 minutos) y la reautenticación antes de cambiar roles, abrir o cerrar períodos y aprobar. El conjunto de roles obligados es una sola constante en `services/api/app/auth/totp.py`, así que extenderlo a los ocho es cambiar una línea.
+
+Los códigos de recuperación de RC-02 están implementados: ocho de un solo uso al activar el factor, guardados como huella SHA-256. La recuperación por videollamada de RC-03 es un procedimiento humano y queda fuera del sistema.
+
+## D-14. El aviso al titular de RC-01 no llega por correo
+
+RC-01 dice "tras 10 intentos fallidos, bloqueo de 30 minutos y aviso al titular". El bloqueo está implementado tal cual, con la espera creciente desde el quinto intento (15 segundos, que se duplican hasta el noveno). El sistema no envía correos, así que el aviso toma dos formas. Cada bloqueo queda como evento `CUENTA_BLOQUEADA` en la bitácora, y la próxima vez que el titular entra la pantalla le dice cuántos intentos fallidos hubo desde su último ingreso.
+
+La implicación es que el titular se entera cuando vuelve a entrar, no en el momento. Agregar un correo es enviar un mensaje desde el mismo punto donde hoy se registra el evento.
+
+## D-15. Las solicitudes de cambio de cuenta tienen dueño fuera de la matriz
+
+C10 exige que exista una aprobación previa de Dirección General antes de que el Personal Administrativo cree o modifique una cuenta. Esa aprobación vive en la tabla `solicitudes_rol`, que no es un objeto de la matriz, igual que `ventanas_auditoria`. Así que la matriz no dice quién puede crear una solicitud ni quién puede aprobarla.
+
+Lo decidimos con CU-01 y CU-03 de P1. El Personal Administrativo registra la solicitud que hizo la jefatura, la Dirección General la aprueba o la rechaza, y el Personal Administrativo la aplica. La base de datos impide que quien pide apruebe, que quien aprueba aplique, y que nadie pida o apruebe sobre su propia cuenta. El servidor impone quién hace cada paso con la misma regla que el motor, negando por omisión y registrando el intento.
+
+La 004 solo modelaba el cambio de rol de una cuenta existente, pero C10 también gobierna el alta (C) y la baja (M). La migración 011 agrega el tipo de solicitud y deja `cuenta_afectada` vacía hasta que el alta se aplica, porque la cuenta todavía no existe cuando se pide.
+
+Hay una lectura de la matriz que conviene explicar. El Personal Administrativo tiene L·C10 sobre O9, es decir, solo lee cuentas con aprobación previa. Lo implementamos literal, y ese rol ve una cuenta únicamente mientras tiene un cambio aprobado por Dirección General pendiente de aplicar. Para ver el estado de sus solicitudes usa la lista de solicitudes, que no expone las cuentas.
+
+Al aplicar un cambio de rol se revocan las asignaciones de zona de la cuenta, por CU-10 ("primero se revoca y después se asigna"), y en el cambio de rol y en la baja se cierran al instante todas sus sesiones, por SE-01 y CU-11.
+
+## D-16. Las cuentas nuevas nacen con una contraseña temporal
+
+P1 no dijo cómo recibe alguien su primera contraseña. Con Keycloak eso lo resolvía el correo de activación. Aquí el Personal Administrativo, al aplicar el alta, recibe una contraseña temporal aleatoria de 20 caracteres que se muestra una sola vez y que entrega a la persona.
+
+La cuenta nace marcada con `debe_cambiar`. Con la contraseña temporal se puede entrar, pero la sesión solo sirve para activar el segundo factor (si el rol lo exige) y cambiarla. El administrativo conoce la temporal pero no la definitiva, y tampoco tiene el segundo factor, así que no puede usar la cuenta que creó.
 
 ## Decisiones aún abiertas
 

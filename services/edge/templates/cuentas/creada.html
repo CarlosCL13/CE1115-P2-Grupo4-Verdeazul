@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block titulo %}Cuenta creada · Verdeazul Carbono{% endblock %}
+
+{% block contenido %}
+<h1>Cuenta creada</h1>
+
+<table>
+  <tbody>
+    <tr><th>Usuario</th><td>{{ creada.usuario }}</td></tr>
+    <tr><th>Rol</th><td>{{ creada.rol }}</td></tr>
+    <tr><th>Contraseña temporal</th><td><code>{{ creada.clave_temporal }}</code></td></tr>
+  </tbody>
+</table>
+
+<p class="error">
+  Entregue la contraseña temporal a la persona por un canal seguro.
+  <strong>No se vuelve a mostrar.</strong> Al entrar por primera vez, el
+  sistema le obliga a cambiarla, así que usted no puede usar la cuenta.
+</p>
+
+<p><a href="/cuentas">Ver cuentas</a></p>
+{% endblock %}

@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block titulo %}{{ persona.nombre_completo }} · Verdeazul Carbono{% endblock %}
+
+{% block contenido %}
+<h1>{{ persona.nombre_completo }}</h1>
+
+<table>
+  <tbody>
+    <tr><th>Usuario</th><td>{{ persona.usuario }}</td></tr>
+    <tr><th>Cédula</th><td><code>{{ persona.cedula }}</code></td></tr>
+    <tr><th>Teléfono</th><td>{{ persona.telefono or 'sin registrar' }}</td></tr>
+    <tr><th>Actualizado</th><td>{{ persona.actualizado_en[:16] | replace('T', ' ') }} UTC</td></tr>
+  </tbody>
+</table>
+
+<p class="nota">Esta consulta quedó registrada en la bitácora.</p>
+
+{% if sesion and sesion.rol == 'PERSONAL_ADMINISTRATIVO' %}
+  <p><a href="/personas/{{ persona.cuenta }}/editar">Corregir datos</a></p>
+{% elif sesion and sesion.rol == 'DUENO_FINCA' %}
+  <p class="nota">Para corregir sus datos, solicítelo al personal administrativo (LG-02).</p>
+{% endif %}
+{% endblock %}

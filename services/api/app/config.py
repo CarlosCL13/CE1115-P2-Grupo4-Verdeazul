@@ -169,14 +169,33 @@ SEGUNDOS_SIN_USO = _entero("SEGUNDOS_SIN_USO", 120)
 # estuviera dentro, un volcado entregaria las cedulas.
 LLAVE_BUSQUEDA_CEDULA = _secreto("LLAVE_BUSQUEDA_CEDULA")
 
+# Llave AES-256-GCM con la que se cifran cedula, telefono y el secreto TOTP
+# antes de guardarlos (LG-05). Distinta de la del HMAC: una sirve para buscar
+# y la otra para leer, y quien tenga solo la primera no puede descifrar nada.
+LLAVE_CIFRADO_DATOS = _secreto("LLAVE_CIFRADO_DATOS")
+
 
 # --- Sesiones y contrasenas -------------------------------------------------
 
+# Tope absoluto de una sesion. SE-01 de P1 dice que ninguna dura mas de 12.
 SESION_HORAS = _entero("SESION_HORAS", 8)
+if not 1 <= SESION_HORAS <= 12:
+    raise FaltaConfiguracion("SESION_HORAS tiene que estar entre 1 y 12 (SE-01)")
 
-# Bloqueo tras intentos fallidos (§2.3.1).
-INTENTOS_MAXIMOS = _entero("INTENTOS_MAXIMOS", 5)
-BLOQUEO_MINUTOS = _entero("BLOQUEO_MINUTOS", 15)
+# Bloqueo tras intentos fallidos, RC-01 de P1: "tras 5 intentos fallidos la
+# espera aumenta; tras 10, bloqueo de 30 minutos".
+INTENTOS_ESPERA = _entero("INTENTOS_ESPERA", 5)
+INTENTOS_BLOQUEO = _entero("INTENTOS_BLOQUEO", 10)
+BLOQUEO_MINUTOS = _entero("BLOQUEO_MINUTOS", 30)
+
+# Cuanto dura una reautenticacion antes de la accion grave que la pidio.
+REAUTENTICACION_MINUTOS = _entero("REAUTENTICACION_MINUTOS", 5)
+
+# CO-02: consultar si la contrasena nueva aparece en filtraciones conocidas
+# (Have I Been Pwned, por k-anonimato: solo salen 5 caracteres del SHA-1). Se
+# apaga en local y en las pruebas, que no deben depender de internet.
+VERIFICAR_FILTRACIONES = _entero(
+    "VERIFICAR_FILTRACIONES", 1 if ENTORNO == "nube" else 0) == 1
 
 # Fijados en la Parte 1. Bajarlos es una desviacion que hay que justificar.
 ARGON2 = {
@@ -198,5 +217,8 @@ def resumen() -> dict:
         "segundos_sin_uso": SEGUNDOS_SIN_USO,
         "base_configurada": BD_URL is not None,
         "sesion_horas": SESION_HORAS,
+        "bloqueo": {"espera_desde": INTENTOS_ESPERA,
+                    "bloqueo_desde": INTENTOS_BLOQUEO,
+                    "minutos": BLOQUEO_MINUTOS},
         "argon2": ARGON2,
     }

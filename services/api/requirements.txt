@@ -18,3 +18,19 @@ psycopg_pool==3.3.3
 # trae psycopg ya lo entienda. Sin esto, verify-full falla y la tentacion es
 # bajar a require, que cifra pero no verifica al servidor.
 certifi==2026.10.23
+
+# --- Identidad (persona 2) ---------------------------------------------------
+
+# Argon2id para las contrasenas (§2.3.1). Envuelve la implementacion de
+# referencia en C del Password Hashing Competition.
+argon2-cffi==25.1.0
+
+# AES-256-GCM para cedula, telefono y secreto TOTP (LG-05). Tambien la va a
+# necesitar la firma Ed25519 de los certificados.
+cryptography==50.0.2
+
+# TOTP del RFC 6238, el segundo factor.
+pyotp==2.10.0
+
+# El codigo QR del alta del segundo factor, como SVG. Python puro, sin Pillow.
+segno==1.6.6

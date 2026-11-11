@@ -14,6 +14,8 @@ from fastapi.responses import JSONResponse
 
 from app import bd, config
 from app.authz.Servicio_opa import motor_disponible
+from app.auth import cifrado
+from app.errores import ErrorAPI, manejar_denegado, manejar_error_api
 
 
 @contextlib.asynccontextmanager
@@ -43,10 +45,36 @@ app = FastAPI(
     lifespan=ciclo,
 )
 
+# Errores con forma unica, {"detail": "codigo"}. Denegado es el 403 del
+# contrato 02: el motivo ya quedo en la bitacora y al cliente no se le dice.
+app.add_exception_handler(ErrorAPI, manejar_error_api)
+app.add_exception_handler(bd.Denegado, manejar_denegado)
+
+
+@app.exception_handler(bd.SinTransaccion)
+async def _sin_base(_request, _error) -> JSONResponse:
+    return JSONResponse(status_code=503, content={"detail": "sin_base_de_datos"})
+
+
+@app.exception_handler(cifrado.DatoAlterado)
+async def _dato_alterado(_request, _error) -> JSONResponse:
+    # GCM detecto un dato cifrado que no cuadra con su fila. No se dice mas.
+    return JSONResponse(status_code=409, content={"detail": "dato_ilegible"})
+
+
+@app.exception_handler(cifrado.SinLlave)
+async def _sin_llave(_request, _error) -> JSONResponse:
+    return JSONResponse(status_code=503, content={"detail": "sin_llave_de_cifrado"})
+
+
 # Aqui va una linea por modulo, a medida que existan:
-#
-# from app.cuentas import router as router_cuentas
-# app.include_router(router_cuentas)
+from app.auth import router as router_auth  # noqa: E402
+from app.personas import router as router_personas  # noqa: E402
+from app.cuentas import router as router_cuentas  # noqa: E402
+
+app.include_router(router_auth)
+app.include_router(router_personas)
+app.include_router(router_cuentas)
 
 
 def _estado_del_motor() -> dict[str, object]:

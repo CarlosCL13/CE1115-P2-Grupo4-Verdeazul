@@ -4,3 +4,6 @@ fastapi
 uvicorn[standard]
 jinja2
 httpx
+
+# Para leer los formularios (Form) de las pantallas de identidad.
+python-multipart

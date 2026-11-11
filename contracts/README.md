@@ -13,6 +13,7 @@ y las piezas encajan al final porque la forma se acordó antes.
 | [02-autorizacion.md](02-autorizacion.md) | Cómo se pregunta si un sujeto puede hacer algo | Personas 1, 2, 4 y 5 |
 | [03-evento-bitacora.md](03-evento-bitacora.md) | Qué campos lleva un registro de auditoría | Todos |
 | [04-endpoints.md](04-endpoints.md) | Qué ruta implementa cada casilla y dónde vive | Todos |
+| [05-sesion.md](05-sesion.md) | Cómo sabe un endpoint quién pregunta, y cómo niega | Todos |
 
 [matriz.md](matriz.md) no es un contrato. Es la matriz de la Parte 1 transcrita
 para no tener que abrir el PDF, y es la referencia que se consulta a diario.

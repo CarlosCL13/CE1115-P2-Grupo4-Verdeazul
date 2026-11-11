@@ -29,6 +29,7 @@ cada pull request.
 | `008_enmiendas.sql` | p1 | `enmiendas` |
 | `009_certificados.sql` | p5 | `certificados` |
 | `010_salida.sql` | p5 | `eventos_pendientes` |
+| `011_identidad_ajustes.sql` | p2 | columnas de sesión, segundo factor y solicitudes de alta y baja |
 
 El orden no es estético, lo imponen las llaves foráneas. `consentimientos`
 apunta a `fincas`, así que la 007 va después de la 005. `enmiendas` y
