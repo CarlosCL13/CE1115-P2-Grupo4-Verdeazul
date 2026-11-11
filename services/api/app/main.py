@@ -71,10 +71,12 @@ async def _sin_llave(_request, _error) -> JSONResponse:
 from app.auth import router as router_auth  # noqa: E402
 from app.personas import router as router_personas  # noqa: E402
 from app.cuentas import router as router_cuentas  # noqa: E402
+from app.certificacion import router as router_certificacion  # noqa: E402
 
 app.include_router(router_auth)
 app.include_router(router_personas)
 app.include_router(router_cuentas)
+app.include_router(router_certificacion)
 
 
 def _estado_del_motor() -> dict[str, object]:
