@@ -69,14 +69,19 @@ def sujeto_midio_en_finca_periodo(cur, sesion: SesionActiva, finca: int,
     return cur.fetchone()["midio"]
 
 
-def previo_por_rol(sesion: SesionActiva) -> tuple[str, tuple]:
+def previo_por_rol(sesion: SesionActiva, objeto: str = "O1") -> tuple[str, tuple]:
     """Un filtro SQL que ahorra preguntar al motor por filas que no pueden ser.
 
     Es solo una optimizacion: el motor sigue decidiendo cada fila. Que un
     filtro de aqui sobrara nunca da acceso, y que faltara solo cuesta tiempo.
     `f` es el alias de la tabla fincas en quien lo use.
     """
-    if sesion.rol in ("TECNICO_CAMPO", "VERIFICADOR"):
+    # La matriz da al verificador lectura sin condicion sobre O3 (mediciones)
+    # y con condicion de zona sobre O1 (fincas). El tecnico tiene zona en ambos.
+    zona_aplica = sesion.rol == "TECNICO_CAMPO" or (
+        sesion.rol == "VERIFICADOR" and objeto == "O1"
+    )
+    if zona_aplica:
         return " AND f.zona = ANY(%s)", (list(sesion.zonas),)
     if sesion.rol == "DUENO_FINCA":
         return " AND f.propietario = %s", (sesion.cuenta,)
