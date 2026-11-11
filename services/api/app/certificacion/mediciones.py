@@ -84,7 +84,7 @@ def listar_mediciones(sesion: SesionCompleta,
                 general.condicion is None or sesion.rol == "AUDITOR_EXTERNO"):
             autorizar(sesion, "L", "O3", objeto="O3:*", atributos=propios)
 
-        filtro, parametros = q.previo_por_rol(sesion)
+        filtro, parametros = q.previo_por_rol(sesion, "O3")
         # Las condiciones del usuario van como parametros. Los fragmentos de
         # texto son fijos, escritos aqui.
         for columna, valor in (("m.periodo", periodo), ("m.finca", finca),

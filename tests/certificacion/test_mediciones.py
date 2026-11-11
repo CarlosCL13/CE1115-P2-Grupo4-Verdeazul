@@ -240,6 +240,19 @@ def test_filtros_del_listado(api, fabrica, escenario):
     assert a  # la registrada no sale con el filtro de aprobadas
 
 
+def test_el_verificador_lista_mediciones_de_toda_zona(api, fabrica, escenario):
+    """La matriz le da lectura sin condicion sobre O3, aunque la finca sea de
+    otra zona. Un filtro previo por zona las escondia en el listado."""
+    e = escenario
+    lejos = fabrica.finca(e["dueno"], "CS")
+    propia = fabrica.medicion(e["finca"], e["periodo"], e["tecnico"])
+    ajena = fabrica.medicion(lejos, e["periodo"], e["tecnico"])
+    h = entrar(api, fabrica, e["ver1"])
+    ids = [m["id"] for m in api.get("/mediciones", headers=h
+                                     ).json()["mediciones"]]
+    assert propia in ids and ajena in ids
+
+
 # --- exportar (C7) ----------------------------------------------------------
 
 def test_c7_el_auditor_exporta_dentro_de_su_ventana(api, fabrica, escenario):
