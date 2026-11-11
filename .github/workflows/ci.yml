@@ -183,6 +183,6 @@ jobs:
       # §7.1: una credencial en el repositorio hace perder el total del
       # criterio de secretos, aunque el sistema funcione. Y el historial de git
       # conserva lo que se borra despues, asi que esto va sobre el historial.
-      - uses: gitleaks/gitleaks-action@v2
+      - uses: gitleaks/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
