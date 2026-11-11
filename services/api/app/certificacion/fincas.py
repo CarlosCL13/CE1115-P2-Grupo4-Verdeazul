@@ -1,4 +1,4 @@
-"""O1 Catalogo de fincas. Contrato 04, persona 4.
+"""O1 Catalogo de fincas. Contrato 04.
 
     GET   /fincas         lo que el sujeto puede ver
     GET   /fincas/{id}    una finca, con su poligono
@@ -18,7 +18,7 @@ El poligono se valida dos veces antes de guardarse (frontera F3). Primero la
 forma, en Python, para que PostGIS nunca reciba algo que no sea un anillo
 cerrado de coordenadas en rango. Despues ST_IsValid, que atrapa lo que solo la
 geometria sabe, como un anillo que se cruza a si mismo. Sobre un poligono
-invalido ST_Intersects devuelve cualquier cosa y C6 (persona 5) dejaria de
+invalido ST_Intersects devuelve cualquier cosa y C6 (certificados) dejaria de
 ser confiable, por eso la base ademas tiene un CHECK.
 """
 

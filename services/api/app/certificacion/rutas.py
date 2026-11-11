@@ -2,7 +2,8 @@
 
 from fastapi import APIRouter
 
-from app.certificacion import fincas
+from app.certificacion import fincas, periodos
 
 router = APIRouter()
 router.include_router(fincas.router)
+router.include_router(periodos.router)
