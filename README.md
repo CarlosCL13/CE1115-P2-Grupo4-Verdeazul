@@ -13,15 +13,16 @@ Desplegado en **https://verdeazul-edge-igwgmkeipa-uk.a.run.app**
 | Servicio de borde en Cloud Run | Desplegado. Es la única dirección pública |
 | Backend y motor de políticas en Cloud Run | Desplegados juntos, cerrados a internet |
 | Despliegue automático | Cada push a `develop` construye, publica y despliega, sin llaves |
-| Secret Manager | Tres secretos, inyectados como variables de entorno |
+| Secret Manager | Ocho secretos, inyectados como variables de entorno |
 | Neon, base principal y bitácora | Esquema aplicado: 15 tablas, 7 tipos enumerados, 5 roles |
 | Motor de políticas en Rego | Completo: 88 celdas y las condiciones C1 a C11 |
 | Pruebas de la matriz | 977, corren en cada pull request contra un OPA real |
+| Pruebas de identidad y certificación | Corren en cada pull request contra un PostgreSQL desechable con el mismo esquema |
 | Dependabot | Configurado para los cuatro componentes |
 | Autenticación | Completa: Argon2id, sesión en la base, segundo factor TOTP, bloqueo RC-01, reautenticación |
-| Endpoints de la matriz | 14 de 57: `/salud` y los 13 de identidad (autenticación, O6, O9, O10) |
+| Endpoints de la matriz | 29 de 57: `/salud`, identidad (autenticación, O6, O9, O10) y certificación (O1, O2, O3). Faltan O4, O5, O7, O8 y O11 |
 | Firma de certificados | Sin empezar |
-| Transmisor de bitácora | Esqueleto que responde 501 |
+| Bitácora | Los eventos se registran en la bandeja de salida. El transmisor que los copia tiene despliegue, conexiones y permisos, pero sus tareas todavía responden 501 |
 
 ## Estructura
 
@@ -41,12 +42,13 @@ services/
   transmisor/              Bandeja de salida a bitácora y trabajos programados
 tests/matriz/              Una prueba por celda: la tabla de cobertura
 tests/identidad/           Contraseñas, sesión, segundo factor, C10 y datos personales
+tests/certificacion/       Fincas, períodos y mediciones
 .github/
   workflows/               Integración continua y despliegue
   dependabot.yml           Revisión semanal de dependencias
 ```
 
-Los cuatro componentes de `services/` corresponden uno a uno con la arquitectura de la Parte 1 y cada uno tiene su propia imagen, como exige §3.2 del enunciado. El motor de políticas y el esquema están completos; el backend todavía no tiene los endpoints de la matriz y el transmisor es un esqueleto.
+Los cuatro componentes de `services/` corresponden uno a uno con la arquitectura de la Parte 1 y cada uno tiene su propia imagen, como exige §3.2 del enunciado. El motor de políticas y el esquema están completos, y el backend tiene identidad y certificación. Faltan certificados, consentimientos, asignaciones, enmiendas y bitácora, y el transmisor es un esqueleto. Lo que falta, en orden de prioridad, está en [contracts/README.md](contracts/README.md).
 
 Los documentos de la Parte 1 y el enunciado no se versionan. Están en el disco de cada uno pero fuera de git: el enunciado es material del profesor y este repositorio es público, y los documentos de la Parte 1 pesan 5.9 MB que el profesor ya tiene. Lo que sí se consulta a diario está transcrito en [contracts/matriz.md](contracts/matriz.md).
 
@@ -98,12 +100,13 @@ firma un token que dice qué repositorio lo pide y Google lo canjea por un
 permiso temporal. No existe ningún archivo de credenciales de Google, ni en el
 repositorio ni en los secretos de GitHub.
 
-Despliega dos servicios en `us-east4`, proyecto `verdeazul-g4`:
+Despliega tres servicios en `us-east4`, proyecto `verdeazul-g4`:
 
 | Servicio | Contenedores | Acceso |
 |---|---|---|
 | `verdeazul-edge` | `edge` | Público |
 | `verdeazul-api` | `api` y `policies`, que comparten red | Solo con credencial de Google |
+| `verdeazul-transmisor` | `transmisor` | Solo Cloud Scheduler. Una instancia y una petición a la vez |
 
 El backend no acepta invocaciones anónimas. Esa es la frontera de confianza F2
 del diseño. El borde lo invoca con su propia cuenta de servicio,
@@ -153,11 +156,22 @@ qué versión volver.
 
 Ninguna credencial vive en el repositorio, en las imágenes ni en el Dockerfile. Se guardan en Secret Manager y Cloud Run las inyecta como variables de entorno con `--set-secrets`, de modo que la configuración de la revisión guarda una referencia al secreto y no su valor.
 
-Hoy hay cuatro: la cadena de conexión de la base principal (`verdeazul-db-url`), la de lectura de la bitácora (`verdeazul-bitacora-lectura-url`), la llave del HMAC de búsqueda de cédulas (`llave-busqueda-cedula`) y la llave AES-256-GCM con la que se cifran cédula, teléfono y secreto TOTP (`llave-cifrado-datos`). Faltan la llave privada de firma de certificados y la del HMAC de la cadena de la bitácora, que llegan con esas dos piezas, y con ellas son seis, el tope de la capa gratuita.
+Son ocho, y cada servicio lee solo los suyos:
 
-El backend corre con su propia cuenta de servicio, que solo puede leer esos secretos. Sin ella, Cloud Run usaría la cuenta por omisión de Compute, que tiene permisos de Editor sobre todo el proyecto.
+| Secreto | Qué es | Lo lee |
+|---|---|---|
+| `verdeazul-db-url` | Cadena de `app_rw` en la base principal | backend |
+| `verdeazul-bitacora-lectura-url` | Cadena de `log_reader` en la bitácora | backend |
+| `llave-busqueda-cedula` | HMAC para buscar por cédula sin guardarla en claro | backend |
+| `llave-cifrado-datos` | AES-256-GCM para cédula, teléfono y secreto TOTP | backend |
+| `llave-firma-certificados` | Llave privada Ed25519 de los certificados | backend |
+| `verdeazul-outbox-url` | Cadena de `outbox_rw` en la base principal | transmisor |
+| `verdeazul-bitacora-escritura-url` | Cadena de `log_writer` en la bitácora | transmisor |
+| `llave-cadena-bitacora` | HMAC de la cadena de la bitácora | transmisor |
 
-La capa gratuita permite seis versiones de secreto activas, así que al crear una versión nueva hay que deshabilitar la anterior.
+El backend y el transmisor corren cada uno con su propia cuenta de servicio, que solo puede leer sus secretos. Sin ella, Cloud Run usaría la cuenta por omisión de Compute, que tiene permisos de Editor sobre todo el proyecto.
+
+La capa gratuita cubre seis versiones de secreto activas. Las dos de más cuestan unos centavos al mes y salen de los créditos; el enunciado pide la capa gratuita para Cloud Run y Neon. Al crear una versión nueva de un secreto hay que deshabilitar la anterior, para no sumar más.
 
 ## Versiones publicadas
 
@@ -165,7 +179,10 @@ Cada etiqueta es el commit del que salió la imagen, así que `git show <etiquet
 
 | Etiqueta | Imágenes | Fecha | Qué trajo |
 |---|---|---|---|
-| `bdec178` | api, policies, edge | 2026-11-09 | Despliegue de `develop` con el PR #13. **Es la que corre hoy** |
+| `72ba002` | api, policies, edge | 2026-11-10 | PR #17: el verificador ve las mediciones. **Es la que corre hoy** |
+| `129ffba` | api, policies, edge | 2026-11-10 | PR #16: certificación, O1 fincas, O2 períodos y O3 mediciones |
+| `8a1cd06` | api, policies, edge | 2026-11-10 | PR #15: identidad, O6, O9 y O10, y el borde con su propia cuenta de servicio |
+| `bdec178` | api, policies, edge | 2026-11-09 | Despliegue de `develop` con el PR #13 |
 | `d2f1d2e` | api, policies, edge | 2026-11-09 | El grupo de conexiones aguanta que Cloud Run y Neon se duerman |
 | `8653dbb` | api, policies, edge | 2026-11-09 | Primer despliegue del backend con el motor como contenedor adjunto |
 | `d4cc04b` | edge | 2026-11-09 | Primer despliegue: solo el borde |
@@ -176,7 +193,7 @@ Cada despliegue agrega una fila arriba. La lista completa, por si esta tabla se 
 gcloud artifacts docker tags list us-east4-docker.pkg.dev/verdeazul-g4/verdeazul
 ```
 
-La versión que está corriendo sale al pie de cada página del borde («versión bdec178») y en el campo `version` de `/salud` del backend.
+La versión que está corriendo sale al pie de cada página del borde («versión» y la etiqueta) y en el campo `version` de `/salud` del backend.
 
 ## Equipo
 
