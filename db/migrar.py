@@ -4,6 +4,7 @@
     python db/migrar.py claves      pone las contrasenas    (como dueno)
     python db/migrar.py app         esquema principal       (como app_migrate)
     python db/migrar.py bitacora    esquema de bitacora     (como dueno)
+    python db/migrar.py semilla     datos de prueba        (como app_migrate)
     python db/migrar.py estado      que esta aplicado y que falta
 
 Sin Alembic porque no hay ORM: sin modelos de SQLAlchemy cada migracion seria
@@ -206,6 +207,32 @@ def poner_claves():
     print("  que es distinto al de verdeazul-app.")
 
 
+def semilla():
+    """Carga db/semilla.sql. No es una migracion y no se anota.
+
+    Se vuelve a correr cuantas veces haga falta: todo el archivo lleva
+    ON CONFLICT DO NOTHING, asi que repetirlo no duplica nada.
+
+    Corre como app_migrate, no como app_rw. Al final adelanta las secuencias
+    con setval, y eso es escribir sobre un objeto de esquema: app_rw solo
+    tiene lectura sobre las secuencias, y esta bien que asi sea.
+    """
+    archivo = RAIZ / "semilla.sql"
+    if not archivo.exists():
+        salir("No existe db/semilla.sql")
+    with conectar("VERDEAZUL_MIGRATE_URL", autocommit=False) as con:
+        with con.cursor() as cur:
+            cur.execute(archivo.read_text(encoding="utf-8"))
+        con.commit()
+        with con.cursor() as cur:
+            for tabla in ("cuentas", "zonas", "fincas", "periodos_medicion",
+                          "mediciones", "enmiendas", "consentimientos",
+                          "asignaciones_zona", "ventanas_auditoria",
+                          "solicitudes_rol"):
+                cur.execute("SELECT count(*) FROM " + tabla)
+                print("  %-20s %s" % (tabla, cur.fetchone()[0]))
+
+
 def estado():
     for destino, (carpeta, variable) in DESTINOS.items():
         print("\n%s  (db/%s)" % (destino, carpeta))
@@ -245,6 +272,8 @@ def main():
 
     if orden == "claves":
         poner_claves()
+    elif orden == "semilla":
+        semilla()
     elif orden == "estado":
         estado()
     elif orden in DESTINOS:
