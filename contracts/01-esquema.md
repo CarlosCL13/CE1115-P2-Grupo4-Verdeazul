@@ -205,6 +205,26 @@ La autenticación necesitó columnas que la 004 no previó. Van en
 Y tres restricciones más que llevan CU-03 y C10 a la base:
 `nadie_pide_para_si`, `nadie_aprueba_para_si` y `aplica_otro_que_el_aprobador`.
 
+## Lo que agregó la 012
+
+Lo que necesitaban el transmisor y los certificados, en
+`012_transmisor_y_certificados.sql`.
+
+| Tabla | Cambio | Para qué |
+|---|---|---|
+| `eventos_pendientes` | Columna `eslabon`, que `outbox_rw` puede escribir | El transmisor guarda ahí el sello del último evento copiado, porque `log_writer` no puede leer la bitácora |
+| `eventos_pendientes` | `enviado_lleva_eslabon` | Una fila se marca enviada junto con su eslabón, nunca a medias |
+| `eventos_pendientes` | Sin UPDATE para `app_rw` | La aplicación anota eventos, no los cambia antes de que se sellen |
+| `certificados` | `app_rw` solo modifica `estado`, `motivo_anulacion` y `anulado_en` | Lo firmado queda como se firmó, igual que `mediciones` |
+
+Verificado contra Neon antes de aplicarla, dentro de una transacción
+revertida: `app_rw` pierde UPDATE sobre la bandeja y sobre `firma`, y
+`outbox_rw` puede cambiar `eslabon` pero no el texto de un evento.
+
+Los certificados no llevan una serie aparte: la verificación pública recibe
+el archivo y no consulta la base (D-09), así que el id secuencial no expone
+nada que no se haya aceptado ya en `db/migrations/README.md`.
+
 ## Dos límites de la plataforma
 
 Para el análisis de seguridad heredada que pide §5.2.
