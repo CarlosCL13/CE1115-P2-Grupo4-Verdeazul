@@ -297,14 +297,14 @@ registre y apruebe su propia medición. Es la casilla que hay que saber defender
 | `POST /certificados/{id}/emitir` | El verificador emite y **firma** el certificado | **C6**: `ST_Intersects` más `pg_advisory_xact_lock`. Clave privada en Secret Manager. Reautenticación | **Certificados 15, 2.3.6** | **Pendiente** |
 | `POST /certificados/{id}/anular` | La Dirección de Certificación anula uno emitido | bitácora | — | **Pendiente** |
 | `GET /certificados/exportar` | El auditor se lleva los certificados de su alcance | C7 | Informe 10 | **Pendiente** |
-| `GET /publico/verificar/{serie}` | **Sin sesión.** Cualquiera comprueba la firma con la clave pública que viaja en el documento | nada: no toca datos privados | **Certificados 15** — «que un tercero pueda confiar sin acceso al sistema» | **Pendiente** |
+| `POST /publico/verificar` | **Sin sesión.** Cualquiera sube el archivo del certificado y se comprueba la firma con la clave pública que viaja en él, comparando su huella con la publicada de Verdeazul (D-10) | nada: no toca la base (D-09). Límite de tasa y tamaño máximo del archivo | **Certificados 15** — «que un tercero pueda confiar sin acceso al sistema» | **Pendiente** |
 
 Estos dos últimos valen quince puntos entre los dos. `emitir` es además el más
 complicado del proyecto: C6 exige revalidar el traslape de polígonos dentro de la
 transacción, porque dos verificadores emitiendo a la vez se pueden colar.
 
-`GET /publico/verificar/{serie}` tiene un límite que hay que declarar en el
-informe: la clave pública en el documento prueba que el contenido no cambió, pero
+`POST /publico/verificar` tiene un límite que hay que declarar en el
+informe (D-10): la clave pública en el documento prueba que el contenido no cambió, pero
 no prueba quién firmó. Para eso hace falta publicar la huella de la clave de
 Verdeazul por un canal aparte.
 
@@ -333,7 +333,7 @@ reescribir.
 | `POST /tareas/transmitir` | Copia los eventos de la bandeja de salida a la base de bitácora | **cuarto rol de BD**: leer la bandeja y marcar enviado | Despliegue 16, Correspondencia P1 7 | **Pendiente** |
 | `POST /tareas/vencer` | Desactiva asignaciones y autorizaciones vencidas (HBAC-03) | tablas de O7 y O8 | Correspondencia P1 7 | **Pendiente** |
 | `POST /tareas/cadena` | Comprueba que la cadena HMAC cuadra de punta a punta | — | Informe 10 | **Pendiente** |
-| `POST /tareas/volcado` | `pg_dump` a Cloud Storage para la retención de diez años | bucket con bloqueo | Correspondencia P1 7 | Pendiente, recortable |
+| `POST /tareas/volcado` | `pg_dump` a Cloud Storage para la retención de diez años | bucket con bloqueo | Correspondencia P1 7 | **Pendiente**: D-03 y D-07 lo citan como compensación |
 
 Este servicio es el único que no expone nada al navegador. Y es la prueba viva de
 que la arquitectura de P1 se implementó: los cuatro procesos periódicos del

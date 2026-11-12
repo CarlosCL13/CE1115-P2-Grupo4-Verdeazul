@@ -28,6 +28,7 @@ El modelo de control de acceso no cambia. Los ocho roles, los once objetos, las 
 | D-16 | Las cuentas nuevas nacen con una contraseña temporal | Hueco del diseño |
 | D-17 | Un período se crea abriéndolo, y `/abrir` reabre uno cerrado | Hueco del diseño |
 | D-18 | El técnico solo registra mediciones en su zona | Refuerzo de la matriz |
+| D-19 | El transmisor corre cada media hora, no casi en tiempo real | Límites del plan gratuito de Neon |
 
 ## D-01. La plataforma de alojamiento es software propietario
 
@@ -178,6 +179,14 @@ Ninguna celda de la matriz cambia, y la operación sigue siendo Ab para el mismo
 La matriz le da al Técnico de campo C sobre O3 con la condición C2 (período abierto) y no menciona C1. Leída literal, un técnico podría registrar una medición de una finca de una zona que no tiene asignada, y solo el verificador lo vería después.
 
 Lo reforzamos. Al registrar, el servidor además le pregunta al motor si el técnico puede leer esa finca (L sobre O1, que sí lleva C1), y si no, niega y registra el intento. No amplía ningún permiso, solo agrega una restricción, que es la dirección que la matriz permite (ABAC quita permisos, nunca los agrega). La implicación de seguridad es que una cuenta de técnico comprometida no puede inyectar mediciones en fincas ajenas.
+
+## D-19. El transmisor corre cada media hora
+
+P1 describía un transmisor que copia cada evento a la bitácora apenas ocurre, con un aviso si el retraso pasaba de cinco minutos.
+
+Aquí lo invoca Cloud Scheduler cada 30 minutos. Cada corrida despierta el cómputo de las dos bases de Neon, que después tarda cinco minutos en volver a dormirse. Con una corrida cada cinco minutos las bases no se dormirían nunca, y una base despierta todo el mes gasta unas 180 horas de cómputo, cuando el plan gratuito da 100 por proyecto. Al agotarlas, Neon suspende la base y el sistema deja de abrir.
+
+La implicación es que un evento puede tardar hasta media hora en aparecer en la bitácora. No se pierde: queda en la bandeja de salida, que se escribe en la misma transacción que la operación, y la hora que se registra es la de la operación, no la de la copia. Lo que se pierde es la detección temprana: durante esa media hora, alguien con acceso a la base principal podría intentar alterar un evento antes de que se selle. Lo acota la migración 012, que le quita a la aplicación el permiso de modificar la bandeja, y para la presentación el transmisor se puede invocar a mano.
 
 ## Decisiones aún abiertas
 

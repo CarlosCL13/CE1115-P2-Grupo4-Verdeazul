@@ -49,15 +49,15 @@ abajo son celdas de la matriz, que descuentan de a poco.
 
 | # | Qué | Endpoints | Por qué va ahí | Necesita antes |
 |---|---|---|---|---|
-| 1 | Emitir y verificar certificados (O5) | `POST /certificados/{id}/emitir`, `GET /publico/verificar/{serie}` | Son los 15 puntos de certificados y §6.4 de la presentación: emitir, verificar, y que un certificado alterado falle | La llave de firma en Secret Manager (Carlos) |
-| 2 | Transmisor: `transmitir` | `POST /tareas/transmitir` | Los eventos ya se registran, pero se quedan en la bandeja de salida y la bitácora está vacía. §6.5 pide mostrarla | El servicio desplegado (Carlos) |
+| 1 | Emitir y verificar certificados (O5) | `POST /certificados/{id}/emitir`, `POST /publico/verificar` | Son los 15 puntos de certificados y §6.4 de la presentación: emitir, verificar, y que un certificado alterado falle | Lista: `config.LLAVE_FIRMA_CERTIFICADOS` |
+| 2 | Transmisor: `transmitir` | `POST /tareas/transmitir` | Los eventos ya se registran, pero se quedan en la bandeja de salida y la bitácora está vacía. §6.5 pide mostrarla | Listo: ver [services/transmisor/README.md](../services/transmisor/README.md) |
 | 3 | O7 consentimientos | los 4 | Sin esto el tercero autorizado no ve ningún certificado (C9) | — |
 | 3 | O11 bitácora | `GET /bitacora`, `GET /bitacora/exportar` | Es donde se ven los eventos | `transmitir` |
 | 4 | O4 enmiendas | los 7 | Siete operaciones de la matriz, con C4, C5 y C11 | — (O3 ya existe) |
 | 5 | El resto de O5 | listar, ver, anular, exportar | Celdas de la matriz | Emitir |
 | 6 | O8 asignaciones | los 4 | Celdas de la matriz | — |
 | 7 | Transmisor: `vencer` y `cadena` | 2 tareas | «Revocar el mismo día» de §4, y detectar si alguien alteró la bitácora | `transmitir` |
-| — | Transmisor: `volcado` | 1 tarea | Es un respaldo, funcionalidad accesoria según §2.1. Se recorta y se registra como desviación | — |
+| — | Transmisor: `volcado` | 1 tarea | Es el respaldo con retención que D-03 y D-07 prometen como compensación (BI-03 y BI-04 de P1). Si no da el tiempo se puede recortar, pero entonces hay que corregir esas dos desviaciones, que hoy lo dan por hecho | — |
 | — | `GET /authz/explicar` | 1 | Opcional, para la presentación | — |
 
 Si sirve como punto de partida, una forma pareja de partirlo en dos es por
@@ -65,13 +65,28 @@ tema: **certificados** (O5 completo, O7 y O8) y **bitácora y enmiendas** (el
 transmisor, O11 y O4). Así cada dependencia queda en manos de la misma persona:
 O5 necesita O7, y O11 necesita el transmisor.
 
-### Lo que hace Carlos en cada caso
+Cuando lo decidan, díganlo en el chat del grupo, para que nadie arranque lo
+mismo dos veces.
 
-- Carga la llave privada de firma en Secret Manager y la conecta al backend.
-- Despliega el transmisor: el servicio en Cloud Run, el secreto del HMAC de la
-  cadena y el Scheduler. Corre cada 30 o 60 minutos, no más seguido: cada
-  corrida despierta a Neon, y el plan gratuito tiene horas de cómputo
-  contadas (§3.1).
+### Lo que ya dejó listo Carlos
+
+- **Para certificados:** la llave privada de firma en Secret Manager, que el
+  backend lee como `config.LLAVE_FIRMA_CERTIFICADOS`. En local sirve cualquier
+  llave de prueba (ver `.env.example`). La base no deja cambiar lo firmado de
+  un certificado, solo lo necesario para anularlo (migración 012). La
+  verificación pública recibe el archivo y no consulta la base (D-09).
+- **Para la bitácora:** el transmisor con su despliegue, sus conexiones, sus
+  permisos y la columna donde lleva la cuenta de la cadena. Cómo debería
+  funcionar `transmitir` está en
+  [services/transmisor/README.md](../services/transmisor/README.md).
+
+### Lo que sigue haciendo Carlos
+
+- Activa el Scheduler cuando `transmitir` funcione. Corre cada 30 minutos, no
+  más seguido: cada corrida despierta a Neon, y el plan gratuito tiene horas
+  de cómputo contadas (§3.1). Es una desviación de P1, registrada como D-19.
+- Le da al transmisor `log_reader` cuando se escriba `cadena`, y el permiso de
+  revocar cuando se escriba `vencer`.
 - Aplica las migraciones nuevas, porque `app_migrate` solo lo tiene él. Quien
   necesite una tabla o una columna escribe el archivo en `db/migrations/`
   dentro de su PR y le avisa.
@@ -90,10 +105,59 @@ O5 necesita O7, y O11 necesita el transmisor.
   qué fila sirve para probar cada condición. Las fincas 1 y 3 se superponen a
   propósito, para C6.
 - **Armar el `.env`** con [db/README.md](../db/README.md). Las cadenas y las
-  llaves se leen de Secret Manager, nunca de un chat. Las contraseñas de las
-  cuentas de prueba las tiene Henry.
+  llaves se leen de Secret Manager, nunca de un chat. Si todavía no tienen
+  acceso al proyecto de Google Cloud, pídanselo a Carlos.
+- **Pedirle a Henry las cuentas de prueba.** Tiene la contraseña de cada una.
+  `dg`, `dc`, `pa`, `vf1` y `vf2` piden además el código del celular: para
+  esas Henry tiene una línea `otpauth://` que se carga en cualquier aplicación
+  autenticadora, así cada quien genera sus códigos. Sin `vf1` o `vf2` no se
+  puede probar emitir, que es del verificador.
 - **Todo por rama y pull request a `develop`.** El merge se habilita solo
   cuando los checks pasan.
+- **Las pruebas nuevas, en el CI.** El job «Identidad contra PostgreSQL» de
+  `.github/workflows/ci.yml` corre solo `tests/identidad` y
+  `tests/certificacion`. Si agregan una carpeta de pruebas, agreguen su línea
+  ahí; si no, el CI no la corre.
+
+### Lo que hay que leer de cada tema
+
+**Certificados (O5, O7 y O8)**
+
+- Las filas de O5 en [04-endpoints.md](04-endpoints.md). `emitir` es lo más
+  delicado del proyecto: C6 se revisa dentro de la transacción con
+  `ST_Intersects` y `pg_advisory_xact_lock`, porque dos verificadores emitiendo
+  a la vez se pueden colar, y pide reautenticación.
+- D-09 y D-10 en
+  [docs/P2_Desviaciones_respecto_P1.md](../docs/P2_Desviaciones_respecto_P1.md):
+  firma Ed25519, la clave pública dentro del documento, la huella de la clave
+  en el evento de emisión, y una verificación que recibe el archivo, no toca la
+  base y tiene límite de tasa y de tamaño.
+- Qué manda cada condición, en el [contrato 02](02-autorizacion.md). C6:
+  `medicion.estado`, `medicion.autor_id` y
+  `contexto.poligono_traslapa_certificado_vigente`. C9:
+  `autorizacion.tercero_id` y `autorizacion.vence`, que salen de
+  `consentimientos`.
+- O7 y O8 usan las tablas `consentimientos` y `asignaciones_zona` (migración
+  007). C8 manda `finca.propietario_id`; C1 en O8 manda `finca.zona` con la zona
+  de la asignación.
+- Datos de prueba: la medición 5 es de la finca 3, que se cruza con la 1. El
+  consentimiento 1 está vigente y el 2 vencido.
+
+**Bitácora y enmiendas (transmisor, O11 y O4)**
+
+- El transmisor: [services/transmisor/README.md](../services/transmisor/README.md),
+  sobre todo «Cómo debería funcionar `transmitir`».
+- O11: el backend ya tiene `bd.lectura_bitacora()`, que entra a la bitácora con
+  `log_reader`, solo lectura. El auditor filtra con C7: `auditoria.inicio` y
+  `auditoria.fin`.
+- O4: las filas de O4 en [04-endpoints.md](04-endpoints.md). La máquina
+  `SOLICITADA → REVISADA → CERRADA | DEVUELTA` va en `enmiendas/estados.py`, y
+  el servidor no deja cerrar lo que no esté REVISADA. C4 manda
+  `enmienda.solicitante_id`; C5, `enmienda.estado`, `enmienda.solicitante_id` y
+  `enmienda.revisor_id`; C11, `medicion.autor_id` y `periodo.estado`. Aprobar
+  pide reautenticación.
+- Datos de prueba: la enmienda 1 está REVISADA, la pidió `tc1` y la revisó
+  `vf1`. Para cerrarla hace falta una tercera persona.
 
 ### Revisión
 

@@ -13,7 +13,7 @@ Desplegado en **https://verdeazul-edge-igwgmkeipa-uk.a.run.app**
 | Servicio de borde en Cloud Run | Desplegado. Es la única dirección pública |
 | Backend y motor de políticas en Cloud Run | Desplegados juntos, cerrados a internet |
 | Despliegue automático | Cada push a `develop` construye, publica y despliega, sin llaves |
-| Secret Manager | Cuatro secretos, inyectados como variables de entorno |
+| Secret Manager | Ocho secretos, inyectados como variables de entorno |
 | Neon, base principal y bitácora | Esquema aplicado: 15 tablas, 7 tipos enumerados, 5 roles |
 | Motor de políticas en Rego | Completo: 88 celdas y las condiciones C1 a C11 |
 | Pruebas de la matriz | 977, corren en cada pull request contra un OPA real |
@@ -22,7 +22,7 @@ Desplegado en **https://verdeazul-edge-igwgmkeipa-uk.a.run.app**
 | Autenticación | Completa: Argon2id, sesión en la base, segundo factor TOTP, bloqueo RC-01, reautenticación |
 | Endpoints de la matriz | 29 de 57: `/salud`, identidad (autenticación, O6, O9, O10) y certificación (O1, O2, O3). Faltan O4, O5, O7, O8 y O11 |
 | Firma de certificados | Sin empezar |
-| Bitácora | Los eventos se registran en la bandeja de salida, pero el transmisor que los copia a la bitácora es un esqueleto que responde 501 |
+| Bitácora | Los eventos se registran en la bandeja de salida. El transmisor que los copia tiene despliegue, conexiones y permisos, pero sus tareas todavía responden 501 |
 
 ## Estructura
 
@@ -100,12 +100,13 @@ firma un token que dice qué repositorio lo pide y Google lo canjea por un
 permiso temporal. No existe ningún archivo de credenciales de Google, ni en el
 repositorio ni en los secretos de GitHub.
 
-Despliega dos servicios en `us-east4`, proyecto `verdeazul-g4`:
+Despliega tres servicios en `us-east4`, proyecto `verdeazul-g4`:
 
 | Servicio | Contenedores | Acceso |
 |---|---|---|
 | `verdeazul-edge` | `edge` | Público |
 | `verdeazul-api` | `api` y `policies`, que comparten red | Solo con credencial de Google |
+| `verdeazul-transmisor` | `transmisor` | Solo Cloud Scheduler. Una instancia y una petición a la vez |
 
 El backend no acepta invocaciones anónimas. Esa es la frontera de confianza F2
 del diseño. El borde lo invoca con su propia cuenta de servicio,
@@ -155,11 +156,22 @@ qué versión volver.
 
 Ninguna credencial vive en el repositorio, en las imágenes ni en el Dockerfile. Se guardan en Secret Manager y Cloud Run las inyecta como variables de entorno con `--set-secrets`, de modo que la configuración de la revisión guarda una referencia al secreto y no su valor.
 
-Hoy hay cuatro: la cadena de conexión de la base principal (`verdeazul-db-url`), la de lectura de la bitácora (`verdeazul-bitacora-lectura-url`), la llave del HMAC de búsqueda de cédulas (`llave-busqueda-cedula`) y la llave AES-256-GCM con la que se cifran cédula, teléfono y secreto TOTP (`llave-cifrado-datos`). Faltan la llave privada de firma de certificados y la del HMAC de la cadena de la bitácora, que llegan con esas dos piezas, y con ellas son seis, el tope de la capa gratuita.
+Son ocho, y cada servicio lee solo los suyos:
 
-El backend corre con su propia cuenta de servicio, que solo puede leer esos secretos. Sin ella, Cloud Run usaría la cuenta por omisión de Compute, que tiene permisos de Editor sobre todo el proyecto.
+| Secreto | Qué es | Lo lee |
+|---|---|---|
+| `verdeazul-db-url` | Cadena de `app_rw` en la base principal | backend |
+| `verdeazul-bitacora-lectura-url` | Cadena de `log_reader` en la bitácora | backend |
+| `llave-busqueda-cedula` | HMAC para buscar por cédula sin guardarla en claro | backend |
+| `llave-cifrado-datos` | AES-256-GCM para cédula, teléfono y secreto TOTP | backend |
+| `llave-firma-certificados` | Llave privada Ed25519 de los certificados | backend |
+| `verdeazul-outbox-url` | Cadena de `outbox_rw` en la base principal | transmisor |
+| `verdeazul-bitacora-escritura-url` | Cadena de `log_writer` en la bitácora | transmisor |
+| `llave-cadena-bitacora` | HMAC de la cadena de la bitácora | transmisor |
 
-La capa gratuita permite seis versiones de secreto activas, así que al crear una versión nueva hay que deshabilitar la anterior.
+El backend y el transmisor corren cada uno con su propia cuenta de servicio, que solo puede leer sus secretos. Sin ella, Cloud Run usaría la cuenta por omisión de Compute, que tiene permisos de Editor sobre todo el proyecto.
+
+La capa gratuita cubre seis versiones de secreto activas. Las dos de más cuestan unos centavos al mes y salen de los créditos; el enunciado pide la capa gratuita para Cloud Run y Neon. Al crear una versión nueva de un secreto hay que deshabilitar la anterior, para no sumar más.
 
 ## Versiones publicadas
 
