@@ -175,6 +175,21 @@ LLAVE_BUSQUEDA_CEDULA = _secreto("LLAVE_BUSQUEDA_CEDULA")
 LLAVE_CIFRADO_DATOS = _secreto("LLAVE_CIFRADO_DATOS")
 
 
+# --- Certificados -----------------------------------------------------------
+
+# Llave privada Ed25519 con la que se firman los certificados (2.3.6). Son 32
+# bytes en base64 url, el mismo formato que LLAVE_CIFRADO_DATOS, y se leen
+# igual: cualquier valor de 32 bytes al azar es una llave Ed25519 valida.
+#
+#   crudo = base64.urlsafe_b64decode(texto + "=" * (-len(texto) % 4))
+#   privada = Ed25519PrivateKey.from_private_bytes(crudo)
+#
+# En la nube sale de Secret Manager y no esta en ninguna maquina. En local
+# sirve cualquier llave de prueba: la clave publica viaja dentro de cada
+# certificado, asi que un certificado firmado en local se verifica igual.
+LLAVE_FIRMA_CERTIFICADOS = _secreto("LLAVE_FIRMA_CERTIFICADOS")
+
+
 # --- Sesiones y contrasenas -------------------------------------------------
 
 # Tope absoluto de una sesion. SE-01 de P1 dice que ninguna dura mas de 12.

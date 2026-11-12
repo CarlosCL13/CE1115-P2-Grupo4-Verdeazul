@@ -1,4 +1,10 @@
-# Pendiente: congelar versiones exactas.
-fastapi
-uvicorn[standard]
-psycopg[binary]
+# Versiones exactas, las mismas que el backend.
+
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+
+psycopg[binary]==3.3.8
+
+# Autoridades certificadoras para sslmode=verify-full (ver el requirements
+# del backend).
+certifi==2026.10.23
