@@ -24,6 +24,83 @@ Un contrato se cambia por pull request, nunca de palabra. Quien lo cambie avisa
 en el chat del grupo, porque la gente que ya escribió código contra él se entera
 cuando le falla algo, no cuando el archivo cambia.
 
+## Dónde estamos (12 de noviembre)
+
+La entrega es el 19 de noviembre. El plan de las secciones de abajo es el
+original; esta sección dice cómo quedó y qué falta.
+
+### Lo que ya está
+
+| Frente | Quién | Qué quedó |
+|---|---|---|
+| Plataforma | Carlos | Despliegue automático sin llaves, Secret Manager, imágenes versionadas, la base con sus roles y los datos de prueba, el CI |
+| Identidad | Henry | Login con Argon2id, segundo factor, sesiones y bloqueo. O6, O9 y O10 |
+| Motor | Ludwin | Las 88 celdas y las condiciones C1 a C11 en Rego, con 977 pruebas en el CI |
+| Certificación | Henry | O1 fincas, O2 períodos y O3 mediciones |
+
+Van **29 de los 57 endpoints**. Cuáles, uno por uno, está en la última columna
+de [04-endpoints.md](04-endpoints.md).
+
+### Lo que falta
+
+Todavía no tiene dueño: Meibel y Adriel se lo reparten. Va en orden de
+prioridad. Lo de arriba se muestra en la presentación o vale más puntos; lo de
+abajo son celdas de la matriz, que descuentan de a poco.
+
+| # | Qué | Endpoints | Por qué va ahí | Necesita antes |
+|---|---|---|---|---|
+| 1 | Emitir y verificar certificados (O5) | `POST /certificados/{id}/emitir`, `GET /publico/verificar/{serie}` | Son los 15 puntos de certificados y §6.4 de la presentación: emitir, verificar, y que un certificado alterado falle | La llave de firma en Secret Manager (Carlos) |
+| 2 | Transmisor: `transmitir` | `POST /tareas/transmitir` | Los eventos ya se registran, pero se quedan en la bandeja de salida y la bitácora está vacía. §6.5 pide mostrarla | El servicio desplegado (Carlos) |
+| 3 | O7 consentimientos | los 4 | Sin esto el tercero autorizado no ve ningún certificado (C9) | — |
+| 3 | O11 bitácora | `GET /bitacora`, `GET /bitacora/exportar` | Es donde se ven los eventos | `transmitir` |
+| 4 | O4 enmiendas | los 7 | Siete operaciones de la matriz, con C4, C5 y C11 | — (O3 ya existe) |
+| 5 | El resto de O5 | listar, ver, anular, exportar | Celdas de la matriz | Emitir |
+| 6 | O8 asignaciones | los 4 | Celdas de la matriz | — |
+| 7 | Transmisor: `vencer` y `cadena` | 2 tareas | «Revocar el mismo día» de §4, y detectar si alguien alteró la bitácora | `transmitir` |
+| — | Transmisor: `volcado` | 1 tarea | Es un respaldo, funcionalidad accesoria según §2.1. Se recorta y se registra como desviación | — |
+| — | `GET /authz/explicar` | 1 | Opcional, para la presentación | — |
+
+Si sirve como punto de partida, una forma pareja de partirlo en dos es por
+tema: **certificados** (O5 completo, O7 y O8) y **bitácora y enmiendas** (el
+transmisor, O11 y O4). Así cada dependencia queda en manos de la misma persona:
+O5 necesita O7, y O11 necesita el transmisor.
+
+### Lo que hace Carlos en cada caso
+
+- Carga la llave privada de firma en Secret Manager y la conecta al backend.
+- Despliega el transmisor: el servicio en Cloud Run, el secreto del HMAC de la
+  cadena y el Scheduler. Corre cada 30 o 60 minutos, no más seguido: cada
+  corrida despierta a Neon, y el plan gratuito tiene horas de cómputo
+  contadas (§3.1).
+- Aplica las migraciones nuevas, porque `app_migrate` solo lo tiene él. Quien
+  necesite una tabla o una columna escribe el archivo en `db/migrations/`
+  dentro de su PR y le avisa.
+
+### Cómo arrancar
+
+- **Copiar el patrón de Henry.** El backend en
+  `services/api/app/certificacion/` (tiene su propio README): `rutas.py`, las
+  consultas aparte, `autorizar()` y `consultar()` de
+  `app/auth/dependencias.py`, y una línea en `main.py`. Las pantallas en
+  `services/edge/app/certificacion.py` y `services/edge/templates/certificacion/`.
+- **Leer los contratos 02 y 05.** El 02 dice qué atributos manda cada
+  condición; el 05, cómo sabe un endpoint quién pregunta. Para reautenticar
+  antes de una acción grave ya existe `exigir_reautenticacion()`.
+- **Usar los datos de prueba.** Al final de `db/semilla.sql` hay una tabla con
+  qué fila sirve para probar cada condición. Las fincas 1 y 3 se superponen a
+  propósito, para C6.
+- **Armar el `.env`** con [db/README.md](../db/README.md). Las cadenas y las
+  llaves se leen de Secret Manager, nunca de un chat. Las contraseñas de las
+  cuentas de prueba las tiene Henry.
+- **Todo por rama y pull request a `develop`.** El merge se habilita solo
+  cuando los checks pasan.
+
+### Revisión
+
+**Sábado 15 de noviembre.** Para ese día, la emisión con firma en una rama, y
+`transmitir` funcionando en local. Lo que no haya arrancado se reasigna ese
+mismo día, porque después ya no hay margen.
+
 ## Cómo está dividido el trabajo
 
 La división cambia a la mitad del proyecto. En la primera semana cada quien
