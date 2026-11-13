@@ -161,6 +161,13 @@ LLAVE_CADENA = _secreto("LLAVE_CADENA_BITACORA")
 # siguiente sigue donde quedo esta: nada de bucles hasta vaciar (§3.1).
 EVENTOS_POR_CORRIDA = _entero("EVENTOS_POR_CORRIDA", 500)
 
+# Edad minima de un evento para transmitirlo. El id y el momento de la bandeja
+# se asignan al empezar la transaccion de la operacion, no al confirmarla: una
+# transaccion lenta puede confirmar el evento 10 despues de que el 11 ya se
+# transmitio. Esperar un poco hace que el lote salga en el orden en que se
+# encadena. Ver el README, «Como funciona transmitir».
+MARGEN_SEGUNDOS = _entero("MARGEN_TRANSMISION_SEGUNDOS", 120)
+
 
 def resumen() -> dict:
     """Lo que se puede mostrar en /salud o en un registro. Sin secretos."""
@@ -171,4 +178,5 @@ def resumen() -> dict:
         "bitacora_configurada": BITACORA_URL is not None,
         "llave_cadena_configurada": LLAVE_CADENA is not None,
         "eventos_por_corrida": EVENTOS_POR_CORRIDA,
+        "margen_segundos": MARGEN_SEGUNDOS,
     }

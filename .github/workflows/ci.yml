@@ -140,6 +140,33 @@ jobs:
       - name: Pruebas de certificacion
         run: pytest tests/certificacion -v -rs
 
+  # El transmisor y el backend se llaman los dos `app`, asi que sus pruebas
+  # corren aparte, desde su carpeta y con su pytest.ini. Ninguna toca una
+  # base: la bitacora es una sola y lo que entra ahi no se borra. La prueba
+  # del vector fijo frena cualquier cambio que dejaria sin verificar los
+  # eventos que ya estan en la cadena.
+  transmisor:
+    name: Transmisor
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/transmisor
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+
+      - name: Instalar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest httpx
+
+      - name: Pruebas del transmisor
+        run: pytest -v
+
   politicas:
     name: Politicas en Rego
     runs-on: ubuntu-latest

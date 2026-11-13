@@ -53,7 +53,77 @@ la de verdad, y no se puede borrar: `log_writer` no tiene DELETE, a propósito.
 Por eso la llave tiene que ser la misma de Secret Manager, y conviene probar el
 cálculo del eslabón con pruebas que no toquen la base antes de transmitir nada.
 
-## Cómo debería funcionar `transmitir`
+## Pruebas
+
+```bash
+cd services/transmisor
+python -m pip install -r requirements.txt pytest httpx
+python -m pytest -v
+```
+
+Van aparte de las de la raíz porque el transmisor y el backend se llaman los
+dos `app`. Ninguna toca una base: la bandeja y la bitácora son cursores falsos
+que anotan en orden lo que se les pide. Corren en el CI, en el job
+«Transmisor».
+
+`tests/test_eslabon.py` tiene un **vector fijo**: un evento, una llave de
+prueba y el eslabón que tienen que dar. Si alguien cambia la forma canónica,
+la hora o el espacio de ids, esa prueba falla, y tiene que fallar: los eventos
+que ya están en la bitácora dejarían de verificar. El valor se puede comprobar
+por fuera, sin Python:
+
+```bash
+printf '\n%s' '<el JSON canónico de la prueba>' | openssl dgst -sha256 -mac HMAC -macopt hexkey:000102…1f
+```
+
+## Cómo funciona `transmitir`
+
+Está en `app/tareas/transmitir.py`, y el eslabón en `app/eslabon.py`, que
+`cadena` tiene que reusar tal cual. Responde, por ejemplo:
+
+```json
+{"tarea": "transmitir", "transmitidos": 37, "primero": 1, "ultimo": 37, "quedan_mas": false}
+```
+
+**El eslabón**, exactamente:
+
+```
+eslabon = hex(HMAC-SHA256(llave, anterior + "\n" + canonico(evento)))
+```
+
+- `llave`: `LLAVE_CADENA_BITACORA` decodificada de base64 url (32 bytes).
+- `anterior`: `""` para el primer evento, o el eslabón del anterior.
+- `canonico`: JSON con `sort_keys` y sin espacios de los campos `id` (el uuid
+  de la bitácora), `momento` (UTC, ISO con microsegundos), `accion`, `sujeto`,
+  `objeto`, `resultado`, `motivo` y `detalle`. Son todas columnas de `eventos`,
+  así que `cadena` lo recalcula leyendo solo la bitácora, en orden de
+  `secuencia`.
+- El uuid es `uuid5(ESPACIO_IDS, str(id_de_la_bandeja))`.
+
+**Dos cambios respecto al plan de abajo**, los dos por lo mismo: el id y el
+`momento` de la bandeja se asignan cuando *empieza* la transacción de la
+operación, no cuando se confirma. Una operación lenta puede confirmar el
+evento 10 después de que el 11 ya se transmitió.
+
+- **El punto de partida** se busca con `ORDER BY enviado_en DESC, id DESC`,
+  no solo por id. `enviado_en` es el mismo para todo un lote y crece de un lote
+  al siguiente, así que ese es el orden en que se encadenó. Con solo `id`, el
+  evento 10 tardío dejaría como "último" al 11 y la cadena se partiría.
+- **Un margen** (`MARGEN_TRANSMISION_SEGUNDOS`, 120 por omisión): solo se
+  transmiten eventos con más de dos minutos. Así el lote sale casi siempre en
+  orden de id, y un reintento ve el mismo lote que la corrida que falló. Para
+  la presentación eso significa que un evento aparece en la bitácora en la
+  primera corrida que pase dos minutos después de la acción.
+
+`ON CONFLICT DO NOTHING` va sin columna de destino: con destino, PostgreSQL
+pide SELECT sobre esa columna, y `log_writer` no lee.
+
+**Códigos:** 200 si corrió (aunque no hubiera nada que enviar), 503 si falta
+una cadena de conexión o la llave, 500 si falló a la mitad. El detalle va a
+Cloud Logging, nunca en la respuesta. Un 5xx deja la corrida en rojo en Cloud
+Scheduler.
+
+## El plan original de `transmitir`
 
 Son dos bases, así que no hay una transacción que cubra las dos. Lo que sigue
 es lo que hace que eso no importe.
