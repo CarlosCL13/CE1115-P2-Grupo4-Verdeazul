@@ -315,8 +315,8 @@ Verdeazul por un canal aparte.
 
 | Endpoint | Para qué sirve | Necesita | Cubre | Estado |
 |---|---|---|---|---|
-| `GET /bitacora` | DG, Dirección de Certificación y administrativo consultan el registro | base de bitácora | Informe 10 | **Pendiente** |
-| `GET /bitacora/exportar` | El auditor externo se lleva el registro de su alcance | C7, cadena verificable | Informe 10 | **Pendiente** |
+| `GET /bitacora` | DG, Dirección de Certificación y administrativo consultan el registro | base de bitácora | Informe 10 | Hecho. Filtros por fecha, acción, sujeto, objeto y resultado; páginas de 100 |
+| `GET /bitacora/exportar` | El auditor externo se lleva el registro de su alcance | C7, cadena verificable | Informe 10 | Hecho. CSV en el orden de la cadena, con eslabón; tope de 5000 filas |
 
 Lo más importante de la persona 5 no es un endpoint: es `registrar.py`, la
 función que los otros cuatro llaman desde el día uno. Tiene que existir con

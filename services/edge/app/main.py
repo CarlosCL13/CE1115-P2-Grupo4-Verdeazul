@@ -118,9 +118,11 @@ def inicio(request: Request):
 # Aqui va una linea por modulo, a medida que existan:
 from app.identidad import router as router_identidad  # noqa: E402
 from app.certificacion import router as router_certificacion  # noqa: E402
+from app.bitacora import router as router_bitacora  # noqa: E402
 
 app.include_router(router_identidad)
 app.include_router(router_certificacion)
+app.include_router(router_bitacora)
 
 
 __all__ = ["app", "VERSION"]

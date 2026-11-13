@@ -63,6 +63,13 @@
 </ul>
 {% endif %}
 
+{% if sesion.rol in ('DIRECCION_GENERAL', 'DIRECCION_CERTIFICACION', 'PERSONAL_ADMINISTRATIVO', 'AUDITOR_EXTERNO') %}
+<h2>Auditoría</h2>
+<ul>
+  <li><a href="/bitacora">Bitácora de auditoría</a></li>
+</ul>
+{% endif %}
+
 <h2>Certificados</h2>
 <ul>
   <li><a href="/">Verificar un certificado</a></li>

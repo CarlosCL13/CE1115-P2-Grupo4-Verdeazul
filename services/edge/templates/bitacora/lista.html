@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block titulo %}Bitácora · Verdeazul Carbono{% endblock %}
+
+{% block contenido %}
+<h1>Bitácora de auditoría</h1>
+
+<p class="nota">
+  Quién hizo qué, sobre qué y cuándo. Se lee de una base aparte, con un rol
+  que solo puede consultar: nadie, ni desde la aplicación, puede cambiar un
+  evento ya registrado. Cada evento lleva un eslabón HMAC encadenado al
+  anterior, así que alterar uno rompe la cadena desde ahí.
+  {% if pendientes %}
+    <br>Hay {{ pendientes }} evento{{ 's' if pendientes != 1 }} recién
+    registrado{{ 's' if pendientes != 1 }} esperando la próxima
+    transmisión (cada 30 minutos).
+  {% endif %}
+</p>
+
+{% if error %}<p class="error">{{ error }}</p>{% endif %}
+
+<form method="get" action="/bitacora">
+  <label for="desde">Desde (fecha UTC)</label>
+  <input type="date" id="desde" name="desde" value="{{ filtros.desde or '' }}">
+
+  <label for="hasta">Hasta (incluida)</label>
+  <input type="date" id="hasta" name="hasta" value="{{ filtros.hasta or '' }}">
+
+  <label for="accion">Acción</label>
+  <input type="text" id="accion" name="accion" maxlength="60"
+         placeholder="ACCESO_DENEGADO" value="{{ filtros.accion or '' }}">
+
+  <label for="sujeto">Sujeto (id de cuenta)</label>
+  <input type="text" id="sujeto" name="sujeto" maxlength="40" inputmode="numeric"
+         value="{{ filtros.sujeto or '' }}">
+
+  <label for="tipo">Objeto</label>
+  <select id="tipo" name="tipo">
+    <option value="">Todos</option>
+    {% for o in ['O1','O2','O3','O4','O5','O6','O7','O8','O9','O10','O11'] %}
+      <option value="{{ o }}" {{ 'selected' if filtros.tipo == o }}>{{ o }}</option>
+    {% endfor %}
+  </select>
+
+  <label for="resultado">Resultado</label>
+  <select id="resultado" name="resultado">
+    <option value="">Todos</option>
+    <option value="PERMITIDO" {{ 'selected' if filtros.resultado == 'PERMITIDO' }}>PERMITIDO</option>
+    <option value="DENEGADO" {{ 'selected' if filtros.resultado == 'DENEGADO' }}>DENEGADO</option>
+  </select>
+
+  <button type="submit">Filtrar</button>
+</form>
+
+{# Comodidad, no control: el backend decide con la matriz (X sobre O11). #}
+{% if sesion and sesion.rol in ('DIRECCION_GENERAL', 'DIRECCION_CERTIFICACION', 'AUDITOR_EXTERNO') %}
+  <p><a href="/bitacora/exportar?{{ filtros | urlencode }}">Descargar estos eventos (CSV)</a></p>
+{% endif %}
+
+<table>
+  <thead>
+    <tr><th>#</th><th>Momento (UTC)</th><th>Acción</th><th>Sujeto</th>
+        <th>Objeto</th><th>Resultado</th><th>Detalle</th></tr>
+  </thead>
+  <tbody>
+    {% for e in eventos %}
+      <tr>
+        <td>{{ e.secuencia }}</td>
+        <td>{{ e.momento[:19] | replace('T', ' ') }}</td>
+        <td>{{ e.accion }}</td>
+        <td>{{ e.usuario or e.sujeto }}{% if e.usuario %} <span class="nota">({{ e.sujeto }})</span>{% endif %}</td>
+        <td>{{ e.objeto }}</td>
+        <td>{{ e.resultado }}{% if e.motivo %}<br><span class="nota">{{ e.motivo }}</span>{% endif %}</td>
+        <td class="nota">
+          {% if e.detalle %}{% for k, v in e.detalle | dictsort %}{{ k }}: {{ v }}{% if not loop.last %}<br>{% endif %}{% endfor %}{% endif %}
+          <br><span title="{{ e.eslabon }}">eslabón {{ e.eslabon[:12] }}…</span>
+        </td>
+      </tr>
+    {% else %}
+      <tr><td colspan="7">No hay eventos con esos filtros.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% if siguiente %}
+  <p><a href="/bitacora?{{ dict(filtros, antes=siguiente) | urlencode }}">Eventos más antiguos →</a></p>
+{% endif %}
+{% endblock %}

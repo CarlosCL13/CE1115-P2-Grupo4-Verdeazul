@@ -140,6 +140,18 @@ jobs:
       - name: Pruebas de certificacion
         run: pytest tests/certificacion -v -rs
 
+      # O11 lee de una segunda base igual a verdeazul-bitacora, en el mismo
+      # contenedor, con log_reader como en Neon. Tambien comprueba que
+      # log_reader no puede insertar, cambiar ni borrar (frontera F6).
+      - name: Esquema de verdeazul-bitacora en la base desechable
+        run: bash tests/bitacora/preparar_bitacora.sh
+
+      - name: Pruebas de bitacora
+        env:
+          VERDEAZUL_PRUEBAS_BITACORA: postgresql://log_reader@localhost:5432/bitacora_pruebas
+          VERDEAZUL_PRUEBAS_BITACORA_DUENO: postgresql://neondb_owner@localhost:5432/bitacora_pruebas
+        run: pytest tests/bitacora -v -rs
+
   # El transmisor y el backend se llaman los dos `app`, asi que sus pruebas
   # corren aparte, desde su carpeta y con su pytest.ini. Ninguna toca una
   # base: la bitacora es una sola y lo que entra ahi no se borra. La prueba
