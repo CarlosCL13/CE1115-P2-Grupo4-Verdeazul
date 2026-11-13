@@ -1,7 +1,7 @@
 # Versiones exactas. P1 se comprometio a dependencias fijadas (E4, ficha de
 # lenguaje), y Dependabot avisa mejor sobre versiones fijas que sobre rangos.
 
-fastapi==0.162.2
+fastapi==0.162.4
 uvicorn[standard]==0.54.0
 
 # Habla con el motor de politicas en el contenedor adjunto. Se eligio sobre
