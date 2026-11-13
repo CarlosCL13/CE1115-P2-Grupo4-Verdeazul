@@ -145,6 +145,11 @@ jobs:
       - name: Pruebas de enmiendas
         run: pytest tests/enmiendas -v -rs
 
+      # O8 asignaciones: quien asigna, C1 en las lecturas, y que revocar o
+      # vencer quita el acceso en la siguiente peticion.
+      - name: Pruebas de asignaciones
+        run: pytest tests/asignaciones -v -rs
+
       # O11 lee de una segunda base igual a verdeazul-bitacora, en el mismo
       # contenedor, con log_reader como en Neon. Tambien comprueba que
       # log_reader no puede insertar, cambiar ni borrar (frontera F6).

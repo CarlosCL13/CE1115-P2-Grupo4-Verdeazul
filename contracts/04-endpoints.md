@@ -83,10 +83,10 @@ casilla del tercero no tiene de dónde leer.
 
 | Endpoint | Para qué sirve | Necesita | Cubre | Estado |
 |---|---|---|---|---|
-| `GET /asignaciones` | Ver qué técnico atiende qué zona | tabla `asignaciones_zona` | — | **Pendiente** |
-| `GET /asignaciones/{id}` | El técnico y el verificador ven su propia asignación | C1 en el motor | — | **Pendiente** |
-| `POST /asignaciones` | La Dirección de Certificación asigna un técnico a una zona, con fecha de vencimiento | evento de bitácora | — | **Pendiente** |
-| `PATCH /asignaciones/{id}` | Cambiar la zona o extender el vencimiento | evento de bitácora | — | **Pendiente** |
+| `GET /asignaciones` | Ver qué técnico atiende qué zona | tabla `asignaciones_zona` | — | Hecho, con «solo vigentes» |
+| `GET /asignaciones/{id}` | El técnico y el verificador ven su propia asignación | C1 en el motor | — | Hecho |
+| `POST /asignaciones` | La Dirección de Certificación asigna un técnico a una zona, con fecha de vencimiento | evento de bitácora | — | Hecho, con reautenticación y fin obligatorio (máx. 3 años) |
+| `PATCH /asignaciones/{id}` | Cambiar la zona o extender el vencimiento | evento de bitácora | — | Hecho. También revoca (`{"revocar": true}`): el acceso se pierde en la siguiente petición |
 
 Este objeto alimenta C1, que es la condición más usada del sistema: aparece en
 O1, O3, O4 y O8. Si `asignacion` está mal modelada, cuatro módulos fallan a la

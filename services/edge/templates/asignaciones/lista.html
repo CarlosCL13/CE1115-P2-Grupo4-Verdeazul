@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block titulo %}Asignaciones · Verdeazul Carbono{% endblock %}
+
+{% block contenido %}
+<div class="asignaciones">
+
+<h1>Asignaciones técnico–zona</h1>
+<p class="nota">
+  Una persona solo ve y mide las fincas de las zonas que tiene asignadas hoy
+  (C1). Toda asignación tiene fecha de fin y deja de dar acceso sola al
+  vencer. Revocar quita el acceso en el siguiente clic de esa persona, sin
+  esperar a que salga del sistema.
+</p>
+
+{% if ok %}<p class="aviso">{{ ok }}</p>{% endif %}
+{% if error %}<p class="error">{{ error }}</p>{% endif %}
+
+<nav class="pestanas" aria-label="Qué asignaciones mostrar">
+  <a href="/asignaciones" class="{{ 'actual' if not solo_vigentes }}">Todas</a>
+  <a href="/asignaciones?vigentes=1" class="{{ 'actual' if solo_vigentes }}">Solo vigentes</a>
+</nav>
+
+<div class="tabla-envoltura">
+<table>
+  <thead>
+    <tr><th>#</th><th>Persona</th><th>Zona</th><th>Vence</th><th>Estado</th>
+        {% if opciones %}<th>Cambiar</th>{% endif %}</tr>
+  </thead>
+  <tbody>
+    {% for a in asignaciones %}
+      <tr class="{{ '' if a.vigente else 'inactiva' }}">
+        <td>{{ a.id }}</td>
+        <td>{{ a.usuario }}<br><span class="nota">{{ a.rol | replace('_', ' ') | lower }} · id {{ a.sujeto }}</span></td>
+        <td>{{ a.zona }}<br><span class="nota">{{ a.zona_nombre }}</span></td>
+        <td>{{ a.vence }}</td>
+        <td>
+          {% if a.revocada_en %}
+            <span class="insignia revocada">Revocada</span><br><span class="nota">{{ a.revocada_en[:10] }}</span>
+          {% elif a.vigente %}
+            <span class="insignia vigente">Vigente</span>
+          {% else %}
+            <span class="insignia vencida">Vencida</span>
+          {% endif %}
+        </td>
+        {% if opciones %}
+        <td class="acciones">
+          {# Comodidad, no control: M sobre O8 lo decide el servidor. #}
+          {% if not a.revocada_en %}
+            <form method="post" action="/asignaciones/{{ a.id }}/modificar" class="en-linea">
+              <input type="hidden" name="csrf" value="{{ csrf }}">
+              <input type="date" name="vence" value="{{ a.vence }}" required aria-label="Nueva fecha de fin">
+              <button>Extender</button>
+            </form>
+            <form method="post" action="/asignaciones/{{ a.id }}/revocar" class="en-linea">
+              <input type="hidden" name="csrf" value="{{ csrf }}">
+              <button class="secundario">Revocar</button>
+            </form>
+          {% endif %}
+        </td>
+        {% endif %}
+      </tr>
+    {% else %}
+      <tr><td colspan="6" class="vacio">No hay asignaciones que su rol pueda ver.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+
+{% if opciones %}
+<h2>Asignar una zona</h2>
+<form method="post" action="/asignaciones" class="tarjeta">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+
+  <label for="sujeto">Persona (técnico o verificador)</label>
+  {# Sin opcion elegida de antemano: dar acceso a una zona tiene que ser
+     una decision explicita, no lo que quedo seleccionado. #}
+  <select id="sujeto" name="sujeto" required>
+    <option value="" disabled selected>Elija una persona…</option>
+    {% for c in opciones.cuentas %}
+      <option value="{{ c.id }}">{{ c.usuario }} · {{ c.rol | replace('_', ' ') | lower }}</option>
+    {% endfor %}
+  </select>
+
+  <label for="zona">Zona</label>
+  <select id="zona" name="zona" required>
+    <option value="" disabled selected>Elija una zona…</option>
+    {% for z in opciones.zonas %}<option value="{{ z.id }}">{{ z.id }} · {{ z.nombre }}</option>{% endfor %}
+  </select>
+
+  <label for="vence">Vence (obligatorio, máximo tres años)</label>
+  <input type="date" id="vence" name="vence" required>
+
+  <button type="submit">Asignar</button>
+  <p class="nota">Pide volver a confirmar la contraseña: dar una zona es dar acceso a sus fincas.</p>
+</form>
+{% endif %}
+
+</div>
+{% endblock %}

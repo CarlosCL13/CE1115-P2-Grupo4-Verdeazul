@@ -153,6 +153,35 @@ pre { margin: 0; font-size: 0.85rem; }
   border-radius: 6px; background: #fff;
 }
 
+/* Asignaciones (O8). Reusa la forma de enmiendas: pestanas, tarjeta. */
+.asignaciones .aviso {
+  padding: 0.5rem 0.8rem; border-left: 3px solid var(--verde);
+  background: #eef6f1; font-size: 0.9rem;
+}
+.asignaciones .pestanas { display: flex; gap: 0.25rem; border-bottom: 1px solid var(--borde); margin: 1rem 0 0; }
+.asignaciones .pestanas a {
+  padding: 0.4rem 0.8rem; color: var(--apagado); text-decoration: none;
+  border-bottom: 3px solid transparent; margin-bottom: -1px;
+}
+.asignaciones .pestanas a.actual { color: var(--verde); border-bottom-color: var(--verde); font-weight: 600; }
+.asignaciones .tabla-envoltura { overflow-x: auto; }
+.asignaciones table { font-size: 0.9rem; }
+.asignaciones td { vertical-align: top; }
+.asignaciones tr.inactiva td { color: var(--apagado); }
+.asignaciones td.acciones { white-space: normal; }
+.asignaciones td.acciones form + form { margin-top: 0.3rem; }
+.asignaciones td.acciones input[type=date] { width: 9.5rem; }
+.asignaciones .vacio { text-align: center; padding: 2rem; color: var(--apagado); }
+.asignaciones .insignia { display: inline-block; padding: 0.05rem 0.5rem; border-radius: 999px; font-size: 0.78rem; font-weight: 600; }
+.asignaciones .insignia.vigente { background: #eef6f1; color: var(--verde); }
+.asignaciones .insignia.vencida { background: #fff4d6; color: #7a5a00; }
+.asignaciones .insignia.revocada { background: #fbeaea; color: var(--rojo); }
+.asignaciones button.secundario { background: #fff; color: var(--rojo); border: 1px solid var(--rojo); }
+.asignaciones form.tarjeta {
+  max-width: 34rem; padding: 1rem; border: 1px solid var(--borde);
+  border-radius: 6px; background: #fff;
+}
+
 /* Bitacora (O11). Todo bajo .bitacora para no tocar las demas paginas. */
 main:has(.bitacora) { max-width: 78rem; }
 .bitacora { --suave: #eef6f1; --rojo-suave: #fbeaea; }

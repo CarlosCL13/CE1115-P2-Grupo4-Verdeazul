@@ -61,6 +61,9 @@
     <li><a href="/mediciones">Mediciones de biomasa</a></li>
     <li><a href="/enmiendas">Enmiendas</a></li>
   {% endif %}
+  {% if sesion.rol in ('DIRECCION_GENERAL', 'DIRECCION_CERTIFICACION', 'TECNICO_CAMPO', 'VERIFICADOR') %}
+    <li><a href="/asignaciones">Asignaciones técnico–zona</a></li>
+  {% endif %}
 </ul>
 {% endif %}
 
