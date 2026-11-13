@@ -1,9 +1,15 @@
-# Pendiente: congelar versiones exactas con `pip freeze` tras la primera
-# construccion que funcione (E4 de P1 y mejor senal de Dependabot).
-fastapi
-uvicorn[standard]
-jinja2
-httpx
+# Versiones exactas, las mismas que el backend y el transmisor. Antes este
+# archivo no fijaba nada: cada construccion bajaba la ultima version, asi que no
+# se podia saber que Starlette corria en produccion, y Dependabot no tenia
+# version con que comparar. Ver docs/Dependabot.md.
+#
+# fastapi 0.162.2 trae Starlette 1.10.0, que corrige CVE-2025-62727: un
+# encabezado Range armado agotaba la CPU en StaticFiles, y el borde sirve
+# /static a internet.
+fastapi==0.162.2
+uvicorn[standard]==0.54.0
+jinja2==3.1.6
+httpx==0.28.1
 
-# Para leer los formularios (Form) de las pantallas de identidad.
-python-multipart
+# Para leer los formularios (Form) de las pantallas.
+python-multipart==0.0.33
