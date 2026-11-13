@@ -159,14 +159,75 @@ Huecos en `eventos.secuencia` son normales: un insert que falla igual gasta un
 número. La cadena demuestra que nada se alteró, no que los números sean
 seguidos; quien escriba `cadena` no debe tomarlos como borrados.
 
-## Las otras tres tareas
+## `cadena`: comprobar que nadie alteró la bitácora
 
-**`cadena`** necesita leer toda la bitácora, y `log_writer` no lee. Cuando se
-escriba, Carlos le da al transmisor el rol `log_reader`, que ya existe.
+`app/tareas/cadena.py`. Relee la bitácora entera con `log_reader`
+(`bd.lectura()`, cadena `VERDEAZUL_BITACORA_LECTURA_URL`) en orden de
+`secuencia` y recalcula cada eslabón con `app/eslabon.py`, la misma función
+de `transmitir`.
 
-**`vencer`** necesita poder marcar asignaciones y consentimientos como
-revocados, y `outbox_rw` no puede. Cuando se escriba, Carlos agrega la
-migración con ese permiso.
+| Qué detecta | Cómo |
+|---|---|
+| Un evento modificado | Su eslabón no cuadra con su contenido |
+| Un evento borrado del medio | El eslabón del siguiente no cuadra |
+| Eventos borrados del final | La «cola»: cuántos eventos dice la bandeja que se enviaron y con qué último eslabón, contra lo que tiene la bitácora |
+
+Después de un eslabón roto sigue con el eslabón guardado como anterior, así
+que marca solo los eventos afectados y no todo lo que viene después. Los
+huecos de `secuencia` no cuentan.
+
+Toma el mismo candado que `transmitir`, así que nunca compara mientras se
+agregan eventos. Deja su propio evento en la bandeja, `CADENA_VERIFICADA` o
+`CADENA_ROTA` (LG-07: la integridad se comprueba y queda constancia).
+Responde **409** si la cadena está rota, para que la corrida salga en rojo en
+Cloud Scheduler.
+
+```json
+{"tarea": "cadena", "intacta": true, "eventos": 230, "enviados_segun_bandeja": 230,
+ "rotos": 0, "primer_roto": null, "cola_completa": true}
+```
+
+## `vencer`: revocar lo vencido
+
+`app/tareas/vencer.py`. Marca `revocada_en` en las asignaciones técnico–zona
+con `vence < hoy` y `revocado_en` en los consentimientos con `vence <= hoy`
+(las mismas fronteras que C1 y C9). Anota un evento por cada una,
+`ASIGNACION_VENCIDA` o `CONSENTIMIENTO_VENCIDO`, con sujeto `SISTEMA`.
+
+El motor ya niega lo vencido por fecha, así que esta tarea no es la que corta
+el acceso: lo deja asentado en la tabla y en la bitácora. Correrla dos veces
+no hace nada la segunda.
+
+## Los permisos que necesitan
+
+**Migración 014** (`db/migrations/014_transmisor_vencer.sql`), para `vencer`
+y para que las dos tareas anoten sus eventos. Le da a `outbox_rw`, columna
+por columna: leer y marcar la fecha de revocación de `asignaciones_zona` y
+`consentimientos`, e insertar eventos en la bandeja. Nada más: no puede
+cambiar una zona ni extender un vencimiento. La aplica quien tenga
+`app_migrate`:
+
+```bash
+python db/migrar.py app
+```
+
+**El secreto de lectura**, para `cadena`. El transmisor recibe además
+`VERDEAZUL_BITACORA_LECTURA_URL` desde `verdeazul-bitacora-lectura-url`, el
+mismo que ya usa el backend. Su cuenta de servicio necesita poder leerlo
+**antes** de desplegar, o la revisión nueva no arranca y Cloud Run sigue con
+la anterior:
+
+```bash
+gcloud secrets add-iam-policy-binding verdeazul-bitacora-lectura-url --project=verdeazul-g4 --member=serviceAccount:verdeazul-transmisor@verdeazul-g4.iam.gserviceaccount.com --role=roles/secretmanager.secretAccessor
+```
+
+En local, el `.env` lleva además:
+
+```
+VERDEAZUL_BITACORA_LECTURA_URL=  (secreto verdeazul-bitacora-lectura-url)
+```
+
+## `volcado`
 
 **`volcado`** es el respaldo con retención bloqueada que D-03 y D-07 prometen
 como compensación: la copia separada de BI-03 y la retención de diez años de
