@@ -17,12 +17,13 @@ Desplegado en **https://verdeazul-edge-igwgmkeipa-uk.a.run.app**
 | Neon, base principal y bitácora | Esquema aplicado: 15 tablas, 7 tipos enumerados, 5 roles |
 | Motor de políticas en Rego | Completo: 88 celdas y las condiciones C1 a C11 |
 | Pruebas de la matriz | 977, corren en cada pull request contra un OPA real |
-| Pruebas de identidad y certificación | Corren en cada pull request contra un PostgreSQL desechable con el mismo esquema |
-| Dependabot | Configurado para los cuatro componentes |
+| Pruebas de integración | Identidad, certificación, enmiendas, asignaciones y bitácora, en cada pull request contra un PostgreSQL desechable con el mismo esquema |
+| Dependabot | Configurado para los cuatro componentes. Alerta atendida: CVE-2025-62727 en Starlette ([docs/Dependabot.md](docs/Dependabot.md)) |
 | Autenticación | Completa: Argon2id, sesión en la base, segundo factor TOTP, bloqueo RC-01, reautenticación |
-| Endpoints de la matriz | 29 de 57: `/salud`, identidad (autenticación, O6, O9, O10) y certificación (O1, O2, O3). Faltan O4, O5, O7, O8 y O11 |
-| Firma de certificados | Sin empezar |
-| Bitácora | Los eventos se registran en la bandeja de salida. El transmisor que los copia tiene despliegue, conexiones y permisos, pero sus tareas todavía responden 501 |
+| Endpoints de la matriz | 46 de 57: identidad (O6, O9, O10), certificación (O1, O2, O3), O4 enmiendas, O8 asignaciones, O11 bitácora y las cuatro tareas del transmisor. **Faltan O5 certificados y O7 consentimientos** |
+| Firma de certificados | Pendiente (O5): la llave ya está en Secret Manager |
+| Bitácora | Completa: bandeja de salida, transmisor cada 30 minutos con cadena HMAC, comprobación de la cadena (`cadena`), revocación de lo vencido (`vencer`) y copia semanal a Cloud Storage con retención de diez años (`volcado`) |
+| Informe | Material completo en [docs/Informe_P2.md](docs/Informe_P2.md) |
 
 ## Estructura
 
@@ -43,12 +44,15 @@ services/
 tests/matriz/              Una prueba por celda: la tabla de cobertura
 tests/identidad/           Contraseñas, sesión, segundo factor, C10 y datos personales
 tests/certificacion/       Fincas, períodos y mediciones
+tests/enmiendas/           O4: C4, C5, C11 y la máquina de estados
+tests/asignaciones/        O8: quién asigna, C1 y revocar el mismo día
+tests/bitacora/            O11: lectura, exportación, C7 y que log_reader no escribe
 .github/
   workflows/               Integración continua y despliegue
   dependabot.yml           Revisión semanal de dependencias
 ```
 
-Los cuatro componentes de `services/` corresponden uno a uno con la arquitectura de la Parte 1 y cada uno tiene su propia imagen, como exige §3.2 del enunciado. El motor de políticas y el esquema están completos, y el backend tiene identidad y certificación. Faltan certificados, consentimientos, asignaciones, enmiendas y bitácora, y el transmisor es un esqueleto. Lo que falta, en orden de prioridad, está en [contracts/README.md](contracts/README.md).
+Los cuatro componentes de `services/` corresponden uno a uno con la arquitectura de la Parte 1 y cada uno tiene su propia imagen, como exige §3.2 del enunciado. El motor de políticas, el esquema, el transmisor y la bitácora están completos, y el backend tiene identidad, certificación, enmiendas y asignaciones. Faltan O5 certificados y O7 consentimientos. Lo que falta para la entrega está en [docs/Informe_P2.md](docs/Informe_P2.md), §7 y §8, y en la sección «Dónde estamos» de [contracts/README.md](contracts/README.md).
 
 Los documentos de la Parte 1 y el enunciado no se versionan. Están en el disco de cada uno pero fuera de git: el enunciado es material del profesor y este repositorio es público, y los documentos de la Parte 1 pesan 5.9 MB que el profesor ya tiene. Lo que sí se consulta a diario está transcrito en [contracts/matriz.md](contracts/matriz.md).
 

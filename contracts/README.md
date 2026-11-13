@@ -37,9 +37,14 @@ original; esta sección dice cómo quedó y qué falta.
 | Identidad | Henry | Login con Argon2id, segundo factor, sesiones y bloqueo. O6, O9 y O10 |
 | Motor | Ludwin | Las 88 celdas y las condiciones C1 a C11 en Rego, con 977 pruebas en el CI |
 | Certificación | Henry | O1 fincas, O2 períodos y O3 mediciones |
+| Bitácora y transmisor | Adriel | O11, y las cuatro tareas: `transmitir`, `vencer`, `cadena` y `volcado` (migración 014, depósito de Cloud Storage) |
+| Enmiendas y asignaciones | Adriel | O4 con C4, C5 y C11; O8 con revocar el mismo día |
+| Dependencias | Adriel | Alerta de Dependabot atendida: CVE-2025-62727 ([docs/Dependabot.md](../docs/Dependabot.md)) |
 
-Van **29 de los 57 endpoints**. Cuáles, uno por uno, está en la última columna
-de [04-endpoints.md](04-endpoints.md).
+Van **46 de los 57 endpoints** (13 de noviembre). Faltan O5 certificados y O7
+consentimientos, que son de Meibel. Cuáles, uno por uno, está en la última
+columna de [04-endpoints.md](04-endpoints.md). El material del informe está en
+[docs/Informe_P2.md](../docs/Informe_P2.md).
 
 ### Lo que falta
 
