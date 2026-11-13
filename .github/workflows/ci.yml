@@ -140,6 +140,11 @@ jobs:
       - name: Pruebas de certificacion
         run: pytest tests/certificacion -v -rs
 
+      # O4 enmiendas: C4, C5 y C11 contra el OPA real, y la maquina de
+      # estados SOLICITADA -> REVISADA -> CERRADA | DEVUELTA.
+      - name: Pruebas de enmiendas
+        run: pytest tests/enmiendas -v -rs
+
       # O11 lee de una segunda base igual a verdeazul-bitacora, en el mismo
       # contenedor, con log_reader como en Neon. Tambien comprueba que
       # log_reader no puede insertar, cambiar ni borrar (frontera F6).

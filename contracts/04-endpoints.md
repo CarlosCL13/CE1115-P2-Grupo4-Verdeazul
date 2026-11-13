@@ -100,13 +100,13 @@ vez. El vencimiento lo revisa `POST /tareas/vencer` de la persona 5 (HBAC-03).
 
 | Endpoint | Para qué sirve | Necesita | Cubre | Estado |
 |---|---|---|---|---|
-| `GET /enmiendas` | La dirección y el verificador ven las enmiendas pendientes | tabla `enmiendas` | — | **Pendiente** |
-| `GET /enmiendas/{id}` | Técnico (su zona), auditor y dueño ven una enmienda | C1, C7, C8 | — | **Pendiente** |
-| `POST /enmiendas` | El técnico pide corregir una medición suya | **C11**: solo con el período cerrado | — | **Pendiente** |
-| `POST /enmiendas/{id}/aprobar` | El verificador acepta la corrección | C4, reautenticación, bitácora | — | **Pendiente** |
-| `POST /enmiendas/{id}/devolver` | El verificador la rechaza con observaciones | C4, bitácora | — | **Pendiente** |
-| `POST /enmiendas/{id}/cerrar` | La Dirección de Certificación la cierra definitivamente | **C5**, bitácora | Matriz: separación de deberes | **Pendiente** |
-| `GET /enmiendas/exportar` | El auditor externo se lleva las enmiendas de su alcance | C7, formato acordado | Informe 10 | **Pendiente** |
+| `GET /enmiendas` | La dirección y el verificador ven las enmiendas pendientes | tabla `enmiendas` | — | Hecho, con filtro por estado |
+| `GET /enmiendas/{id}` | Técnico (su zona), auditor y dueño ven una enmienda | C1, C7, C8 | — | Hecho |
+| `POST /enmiendas` | El técnico pide corregir una medición suya | **C11**: solo con el período cerrado | — | Hecho. Una sola abierta por medición (409) |
+| `POST /enmiendas/{id}/aprobar` | El verificador acepta la corrección | C4, reautenticación, bitácora | — | Hecho |
+| `POST /enmiendas/{id}/devolver` | El verificador la rechaza con observaciones | C4, bitácora | — | Hecho. El motivo queda en el evento |
+| `POST /enmiendas/{id}/cerrar` | La Dirección de Certificación la cierra definitivamente | **C5**, bitácora | Matriz: separación de deberes | Hecho, con reautenticación |
+| `GET /enmiendas/exportar` | El auditor externo se lleva las enmiendas de su alcance | C7, formato acordado | Informe 10 | Hecho |
 
 `estados.py` es donde vive la máquina
 `SOLICITADA → REVISADA → CERRADA | DEVUELTA`. Nada que no esté REVISADA se puede

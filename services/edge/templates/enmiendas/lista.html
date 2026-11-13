@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block titulo %}Enmiendas · Verdeazul Carbono{% endblock %}
+
+{% block contenido %}
+<div class="enmiendas">
+
+<h1>Enmiendas</h1>
+<p class="nota">
+  Una medición no se edita después del cierre: se corrige con una enmienda.
+  La pide el técnico que midió, la revisa un verificador distinto y la cierra
+  Dirección de Certificación. Tres personas distintas, y el servidor lo exige
+  en cada paso.
+</p>
+
+{% if ok %}<p class="aviso">{{ ok }}</p>{% endif %}
+{% if error %}<p class="error">{{ error }}</p>{% endif %}
+
+{# El flujo, con el paso de cada rol. #}
+<ol class="flujo">
+  <li><strong>Solicitada</strong><span>Técnico (C11: su medición, período cerrado)</span></li>
+  <li><strong>Revisada</strong><span>Verificador que no la pidió (C4)</span></li>
+  <li><strong>Cerrada</strong><span>Dir. de Certificación, tercera persona (C5)</span></li>
+</ol>
+
+<nav class="pestanas" aria-label="Filtrar por estado">
+  <a href="/enmiendas" class="{{ 'actual' if not filtro_estado }}">Todas</a>
+  {% for e in estados %}
+    <a href="/enmiendas?estado={{ e }}" class="{{ 'actual' if filtro_estado == e }}">{{ e | capitalize }}s</a>
+  {% endfor %}
+</nav>
+
+<div class="tabla-envoltura">
+<table>
+  <thead>
+    <tr><th>#</th><th>Medición</th><th>Justificación</th><th>Estado</th><th>Personas</th><th></th></tr>
+  </thead>
+  <tbody>
+    {% for e in enmiendas %}
+      <tr>
+        <td>{{ e.id }}</td>
+        <td>
+          <a href="/mediciones">Medición {{ e.medicion }}</a><br>
+          <span class="nota">finca {{ e.finca }} · {{ e.periodo_etiqueta }} · {{ e.biomasa_toneladas }} t</span>
+        </td>
+        <td class="justificacion">{{ e.justificacion }}</td>
+        <td><span class="insignia {{ e.estado | lower }}">{{ e.estado | capitalize }}</span></td>
+        <td class="personas">
+          <div><span class="nota">pidió</span> {{ e.solicitante_usuario }}</div>
+          {% if e.revisor %}<div><span class="nota">{{ 'devolvió' if e.estado == 'DEVUELTA' else 'revisó' }}</span> {{ e.revisor_usuario }}</div>{% endif %}
+          {% if e.cerrada_por %}<div><span class="nota">cerró</span> {{ e.cerrada_por_usuario }}</div>{% endif %}
+        </td>
+        <td class="acciones">
+          {# Comodidad, no control: C4 y C5 los decide el servidor. #}
+          {% if sesion and sesion.rol == 'VERIFICADOR' and e.estado == 'SOLICITADA' %}
+            <form method="post" action="/enmiendas/{{ e.id }}/aprobar" class="en-linea">
+              <input type="hidden" name="csrf" value="{{ csrf }}">
+              <button>Aprobar</button>
+            </form>
+            <form method="post" action="/enmiendas/{{ e.id }}/devolver" class="en-linea">
+              <input type="hidden" name="csrf" value="{{ csrf }}">
+              <input type="text" name="motivo" placeholder="Motivo" maxlength="500" required minlength="5">
+              <button class="secundario">Devolver</button>
+            </form>
+          {% endif %}
+          {% if sesion and sesion.rol == 'DIRECCION_CERTIFICACION' and e.estado == 'REVISADA' %}
+            <form method="post" action="/enmiendas/{{ e.id }}/cerrar" class="en-linea">
+              <input type="hidden" name="csrf" value="{{ csrf }}">
+              <button>Cerrar</button>
+            </form>
+          {% endif %}
+        </td>
+      </tr>
+    {% else %}
+      <tr><td colspan="6" class="vacio">No hay enmiendas{{ ' en ese estado' if filtro_estado }} que su rol pueda ver.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+
+{% if sesion and sesion.rol == 'AUDITOR_EXTERNO' %}
+  <p><a href="/enmiendas/exportar">Descargar las enmiendas (CSV)</a></p>
+{% endif %}
+
+{% if sesion and sesion.rol == 'TECNICO_CAMPO' %}
+<h2>Pedir una enmienda</h2>
+{% if candidatas %}
+<form method="post" action="/enmiendas" class="tarjeta">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+
+  <label for="medicion">Medición propia, de un período cerrado</label>
+  <select id="medicion" name="medicion" required>
+    {% for m in candidatas %}
+      <option value="{{ m.id }}">Medición {{ m.id }} · finca {{ m.finca }} · {{ m.periodo_etiqueta }} · {{ m.biomasa_toneladas }} t ({{ m.estado | lower }})</option>
+    {% endfor %}
+  </select>
+
+  <label for="justificacion">Qué hay que corregir y por qué</label>
+  <textarea id="justificacion" name="justificacion" rows="4" minlength="10"
+            maxlength="1000" required
+            placeholder="Por ejemplo: el equipo estaba descalibrado; la biomasa correcta es 108.5 t."></textarea>
+
+  <button type="submit">Solicitar enmienda</button>
+</form>
+{% else %}
+  <p class="nota">
+    No tiene mediciones propias en períodos cerrados. Mientras el período
+    está abierto, una medición se corrige devolviéndola, no con una enmienda.
+  </p>
+{% endif %}
+{% endif %}
+
+</div>
+{% endblock %}
