@@ -3,86 +3,165 @@
 {% block titulo %}Bitácora · Verdeazul Carbono{% endblock %}
 
 {% block contenido %}
-<h1>Bitácora de auditoría</h1>
+<div class="bitacora">
 
-<p class="nota">
-  Quién hizo qué, sobre qué y cuándo. Se lee de una base aparte, con un rol
-  que solo puede consultar: nadie, ni desde la aplicación, puede cambiar un
-  evento ya registrado. Cada evento lleva un eslabón HMAC encadenado al
-  anterior, así que alterar uno rompe la cadena desde ahí.
-  {% if pendientes %}
-    <br>Hay {{ pendientes }} evento{{ 's' if pendientes != 1 }} recién
-    registrado{{ 's' if pendientes != 1 }} esperando la próxima
-    transmisión (cada 30 minutos).
+<div class="bit-cabecera">
+  <div>
+    <h1>Bitácora de auditoría</h1>
+    <p class="nota">
+      Quién hizo qué, sobre qué y cuándo. Se lee de una base aparte con un rol
+      de solo lectura: nadie, ni desde la aplicación, puede cambiar un evento
+      registrado. Cada uno lleva un eslabón HMAC encadenado al anterior.
+    </p>
+  </div>
+  {# Comodidad, no control: el backend decide con la matriz (X sobre O11). #}
+  {% if sesion and sesion.rol in ('DIRECCION_GENERAL', 'DIRECCION_CERTIFICACION', 'AUDITOR_EXTERNO') %}
+    <a class="boton-sec" href="{{ exportar }}">Descargar CSV{% if etiquetas %} (filtrado){% endif %}</a>
   {% endif %}
-</p>
+</div>
+
+{% if pendientes %}
+  <p class="aviso">
+    {{ pendientes }} evento{{ 's' if pendientes != 1 }} recién
+    registrado{{ 's' if pendientes != 1 }} todavía en la bandeja de salida:
+    aparecerá{{ 'n' if pendientes != 1 }} aquí en la próxima transmisión.
+  </p>
+{% endif %}
 
 {% if error %}<p class="error">{{ error }}</p>{% endif %}
 
-<form method="get" action="/bitacora">
-  <label for="desde">Desde (fecha UTC)</label>
-  <input type="date" id="desde" name="desde" value="{{ filtros.desde or '' }}">
+{# --- Filtros ----------------------------------------------------------- #}
+<form method="get" action="/bitacora" class="filtros">
+  <input type="hidden" name="por_pagina" value="{{ por_pagina }}">
 
-  <label for="hasta">Hasta (incluida)</label>
-  <input type="date" id="hasta" name="hasta" value="{{ filtros.hasta or '' }}">
+  <div class="campo {{ 'activo' if filtros.desde }}">
+    <label for="desde">Desde (UTC)</label>
+    <input type="date" id="desde" name="desde" value="{{ filtros.desde or '' }}">
+  </div>
+  <div class="campo {{ 'activo' if filtros.hasta }}">
+    <label for="hasta">Hasta (incluida)</label>
+    <input type="date" id="hasta" name="hasta" value="{{ filtros.hasta or '' }}">
+  </div>
+  <div class="campo {{ 'activo' if filtros.resultado }}">
+    <label for="resultado">Resultado</label>
+    <select id="resultado" name="resultado">
+      <option value="">Todos</option>
+      <option value="PERMITIDO" {{ 'selected' if filtros.resultado == 'PERMITIDO' }}>Permitido</option>
+      <option value="DENEGADO" {{ 'selected' if filtros.resultado == 'DENEGADO' }}>Denegado</option>
+    </select>
+  </div>
+  <div class="campo {{ 'activo' if filtros.accion }}">
+    <label for="accion">Acción</label>
+    <input type="text" id="accion" name="accion" maxlength="60"
+           placeholder="p. ej. ACCESO_DENEGADO" value="{{ filtros.accion or '' }}">
+  </div>
+  <div class="campo {{ 'activo' if filtros.sujeto }}">
+    <label for="sujeto">Sujeto (id de cuenta)</label>
+    <input type="text" id="sujeto" name="sujeto" maxlength="40" inputmode="numeric"
+           placeholder="p. ej. 4" value="{{ filtros.sujeto or '' }}">
+  </div>
+  <div class="campo {{ 'activo' if filtros.tipo }}">
+    <label for="tipo">Objeto</label>
+    <select id="tipo" name="tipo">
+      <option value="">Todos</option>
+      {% for o, nombre in [('O1','O1 Fincas'),('O2','O2 Períodos'),('O3','O3 Mediciones'),
+                           ('O4','O4 Enmiendas'),('O5','O5 Certificados'),('O6','O6 Datos personales'),
+                           ('O7','O7 Consentimientos'),('O8','O8 Asignaciones'),('O9','O9 Cuentas'),
+                           ('O10','O10 Credenciales'),('O11','O11 Bitácora')] %}
+        <option value="{{ o }}" {{ 'selected' if filtros.tipo == o }}>{{ nombre }}</option>
+      {% endfor %}
+    </select>
+  </div>
 
-  <label for="accion">Acción</label>
-  <input type="text" id="accion" name="accion" maxlength="60"
-         placeholder="ACCESO_DENEGADO" value="{{ filtros.accion or '' }}">
-
-  <label for="sujeto">Sujeto (id de cuenta)</label>
-  <input type="text" id="sujeto" name="sujeto" maxlength="40" inputmode="numeric"
-         value="{{ filtros.sujeto or '' }}">
-
-  <label for="tipo">Objeto</label>
-  <select id="tipo" name="tipo">
-    <option value="">Todos</option>
-    {% for o in ['O1','O2','O3','O4','O5','O6','O7','O8','O9','O10','O11'] %}
-      <option value="{{ o }}" {{ 'selected' if filtros.tipo == o }}>{{ o }}</option>
-    {% endfor %}
-  </select>
-
-  <label for="resultado">Resultado</label>
-  <select id="resultado" name="resultado">
-    <option value="">Todos</option>
-    <option value="PERMITIDO" {{ 'selected' if filtros.resultado == 'PERMITIDO' }}>PERMITIDO</option>
-    <option value="DENEGADO" {{ 'selected' if filtros.resultado == 'DENEGADO' }}>DENEGADO</option>
-  </select>
-
-  <button type="submit">Filtrar</button>
+  <div class="acciones">
+    <button type="submit">Aplicar filtros</button>
+    {% if etiquetas %}<a href="/bitacora?por_pagina={{ por_pagina }}">Quitar todos</a>{% endif %}
+  </div>
 </form>
 
-{# Comodidad, no control: el backend decide con la matriz (X sobre O11). #}
-{% if sesion and sesion.rol in ('DIRECCION_GENERAL', 'DIRECCION_CERTIFICACION', 'AUDITOR_EXTERNO') %}
-  <p><a href="/bitacora/exportar?{{ filtros | urlencode }}">Descargar estos eventos (CSV)</a></p>
-{% endif %}
+{# --- Lo que esta filtrando ahora mismo ------------------------------------ #}
+<div class="etiquetas">
+  {% if etiquetas %}
+    <span class="nota">Filtrando por:</span>
+    {% for e in etiquetas %}
+      <a class="etiqueta" href="{{ e.quitar }}" title="Quitar este filtro">
+        {{ e.nombre }}: <strong>{{ e.valor }}</strong> <span aria-hidden="true">×</span>
+      </a>
+    {% endfor %}
+  {% else %}
+    <span class="etiqueta neutra">Sin filtros: todos los eventos</span>
+  {% endif %}
+</div>
 
-<table>
+{# --- Tabla -------------------------------------------------------------- #}
+<div class="tabla-envoltura">
+<table class="tabla-bitacora">
   <thead>
-    <tr><th>#</th><th>Momento (UTC)</th><th>Acción</th><th>Sujeto</th>
-        <th>Objeto</th><th>Resultado</th><th>Detalle</th></tr>
+    <tr>
+      <th class="num">#</th>
+      <th>Momento (UTC)</th>
+      <th>Acción</th>
+      <th>Sujeto</th>
+      <th>Objeto</th>
+      <th>Resultado</th>
+      <th>Detalle</th>
+    </tr>
   </thead>
   <tbody>
     {% for e in eventos %}
       <tr>
-        <td>{{ e.secuencia }}</td>
-        <td>{{ e.momento[:19] | replace('T', ' ') }}</td>
-        <td>{{ e.accion }}</td>
-        <td>{{ e.usuario or e.sujeto }}{% if e.usuario %} <span class="nota">({{ e.sujeto }})</span>{% endif %}</td>
-        <td>{{ e.objeto }}</td>
-        <td>{{ e.resultado }}{% if e.motivo %}<br><span class="nota">{{ e.motivo }}</span>{% endif %}</td>
-        <td class="nota">
-          {% if e.detalle %}{% for k, v in e.detalle | dictsort %}{{ k }}: {{ v }}{% if not loop.last %}<br>{% endif %}{% endfor %}{% endif %}
-          <br><span title="{{ e.eslabon }}">eslabón {{ e.eslabon[:12] }}…</span>
+        <td class="num">{{ primera_fila + loop.index0 }}</td>
+        <td class="momento">{{ e.momento[:10] }}<br><span class="nota">{{ e.momento[11:19] }}</span></td>
+        <td class="mono">{{ e.accion }}</td>
+        <td>{{ e.usuario or e.sujeto }}{% if e.usuario %}<br><span class="nota">id {{ e.sujeto }}</span>{% endif %}</td>
+        <td class="mono">{{ e.objeto }}</td>
+        <td>
+          <span class="insignia {{ 'denegado' if e.resultado == 'DENEGADO' else 'permitido' }}">
+            {{ 'Denegado' if e.resultado == 'DENEGADO' else 'Permitido' }}
+          </span>
+          {% if e.motivo %}<div class="nota motivo">{{ e.motivo }}</div>{% endif %}
+        </td>
+        <td class="detalle">
+          {% if e.detalle %}
+            {% for k, v in e.detalle | dictsort %}<div><span class="nota">{{ k }}:</span> {{ v }}</div>{% endfor %}
+          {% endif %}
+          {# La secuencia de la base puede tener huecos (un INSERT que falla
+             gasta un numero). No es la posicion: la integridad la da el
+             eslabon, no la numeracion. #}
+          <div class="nota" title="Eslabón completo: {{ e.eslabon }}">sec. {{ e.secuencia }} · eslabón {{ e.eslabon[:10] }}…</div>
         </td>
       </tr>
     {% else %}
-      <tr><td colspan="7">No hay eventos con esos filtros.</td></tr>
+      <tr><td colspan="7" class="vacio">No hay eventos con esos filtros.</td></tr>
     {% endfor %}
   </tbody>
 </table>
+</div>
 
-{% if siguiente %}
-  <p><a href="/bitacora?{{ dict(filtros, antes=siguiente) | urlencode }}">Eventos más antiguos →</a></p>
-{% endif %}
+{# --- Paginas ------------------------------------------------------------ #}
+<nav class="paginador" aria-label="Páginas de la bitácora">
+  <span class="nota">
+    {% if total %}Mostrando {{ primera_fila }}–{{ primera_fila + eventos | length - 1 }} de {{ total }}
+    {% else %}0 eventos{% endif %}
+  </span>
+
+  <span class="paginas">
+    {% if anterior %}<a href="{{ anterior }}">‹ Anterior</a>{% else %}<span class="apagada">‹ Anterior</span>{% endif %}
+    {% for n, enlace in numeros %}
+      {% if n is none %}<span class="salto">…</span>
+      {% elif n == pagina_actual %}<span class="actual" aria-current="page">{{ n }}</span>
+      {% else %}<a href="{{ enlace }}">{{ n }}</a>{% endif %}
+    {% endfor %}
+    {% if siguiente %}<a href="{{ siguiente }}">Siguiente ›</a>{% else %}<span class="apagada">Siguiente ›</span>{% endif %}
+  </span>
+
+  <span class="tamanos nota">
+    Por página:
+    {% for n, enlace in tamanos %}
+      {% if n == por_pagina %}<strong>{{ n }}</strong>{% else %}<a href="{{ enlace }}">{{ n }}</a>{% endif %}
+    {% endfor %}
+  </span>
+</nav>
+
+</div>
 {% endblock %}

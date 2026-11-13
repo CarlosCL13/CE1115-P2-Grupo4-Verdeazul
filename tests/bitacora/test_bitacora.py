@@ -159,22 +159,24 @@ def test_filtros(api, fabrica, bitacora, hoy):
 
 def test_paginas(api, fabrica, bitacora):
     accion = bitacora.accion_unica()
-    for i in range(3):
+    for i in range(12):
         bitacora.evento(accion=accion, objeto="O3:%d" % i)
     _, cabecera = _cuenta_y_entrar(api, fabrica, "DIRECCION_GENERAL")
 
-    vistos, antes = [], None
-    for _ in range(4):
-        params = {"accion": accion, "limite": 2}
-        if antes:
-            params["antes"] = antes
-        datos = api.get("/bitacora", headers=cabecera, params=params).json()
-        vistos += [e["objeto"] for e in datos["eventos"]]
-        antes = datos["siguiente"]
-        if antes is None:
-            break
+    def pagina(n):
+        r = api.get("/bitacora", headers=cabecera,
+                    params={"accion": accion, "por_pagina": 10, "pagina": n})
+        assert r.status_code == 200, r.text
+        return r.json()
+
+    primera, segunda = pagina(1), pagina(2)
+    assert (primera["total"], primera["paginas"]) == (12, 2)
+    assert primera["primera_fila"] == 1 and segunda["primera_fila"] == 11
     # Del mas nuevo al mas viejo, sin repetir ni saltar.
-    assert vistos == ["O3:2", "O3:1", "O3:0"]
+    vistos = [e["objeto"] for e in primera["eventos"] + segunda["eventos"]]
+    assert vistos == ["O3:%d" % i for i in range(11, -1, -1)]
+    # Una pagina que no existe muestra la ultima.
+    assert pagina(9)["pagina"] == 2
 
 
 @pytest.mark.parametrize("filtros", [
@@ -184,7 +186,8 @@ def test_paginas(api, fabrica, bitacora):
     {"accion": "X' OR '1'='1"},
     {"sujeto": "1; DROP TABLE eventos"},
     {"desde": "ayer"},
-    {"limite": 1000},
+    {"por_pagina": 1000},
+    {"pagina": 0},
 ])
 def test_un_filtro_mal_formado_es_422(api, fabrica, filtros):
     _, cabecera = _cuenta_y_entrar(api, fabrica, "DIRECCION_GENERAL")

@@ -41,9 +41,10 @@ from app.errores import ErrorAPI
 
 router = APIRouter(tags=["bitacora"])
 
-# Una pagina del listado. El borde pide la siguiente con `antes`.
-LIMITE_LISTADO = 100
-LIMITE_MAXIMO = 200
+# Tamanos de pagina que se aceptan. Cerrados: una pagina de 10 000 seria la
+# misma carga masiva que el tope del CSV evita.
+POR_PAGINA = (10, 25, 50)
+POR_PAGINA_OMISION = 25
 
 # Tope del CSV. La bitacora crece sin parar y un CSV sin tope es justo la
 # carga masiva que §3.1 pide evitar. Para mas, se exporta por rango de fechas.
@@ -53,7 +54,7 @@ _COLUMNAS = ("secuencia, id, momento, accion, sujeto, objeto, resultado, "
              "motivo, detalle, eslabon")
 
 
-def _filtro(*, desde, hasta, accion, sujeto, tipo, resultado, antes):
+def _filtro(*, desde, hasta, accion, sujeto, tipo, resultado):
     """Arma el WHERE. Los fragmentos son fijos; los valores van como %s."""
     partes, valores = [], []
     if desde is not None:
@@ -80,9 +81,6 @@ def _filtro(*, desde, hasta, accion, sujeto, tipo, resultado, antes):
     if resultado:
         partes.append("resultado = %s")
         valores.append(resultado)
-    if antes is not None:
-        partes.append("secuencia < %s")
-        valores.append(antes)
     if desde is not None and hasta is not None and hasta < desde:
         raise ErrorAPI(422, "rango_invalido",
                        "La fecha final es anterior a la inicial.")
@@ -90,11 +88,20 @@ def _filtro(*, desde, hasta, accion, sujeto, tipo, resultado, antes):
     return donde, tuple(valores)
 
 
-def _leer(donde: str, valores: tuple, limite: int) -> list[dict]:
+def _leer(donde: str, valores: tuple, limite: int,
+          desde_fila: int = 0) -> list[dict]:
+    """Del mas nuevo al mas viejo. `desde_fila` es el OFFSET de la pagina."""
     with bd.lectura_bitacora() as cur:
-        cur.execute("SELECT %s FROM eventos%s ORDER BY secuencia DESC LIMIT %%s"
-                    % (_COLUMNAS, donde), (*valores, limite))
+        cur.execute("SELECT %s FROM eventos%s ORDER BY secuencia DESC "
+                    "LIMIT %%s OFFSET %%s" % (_COLUMNAS, donde),
+                    (*valores, limite, desde_fila))
         return cur.fetchall()
+
+
+def _contar(donde: str, valores: tuple) -> int:
+    with bd.lectura_bitacora() as cur:
+        cur.execute("SELECT count(*) AS n FROM eventos%s" % donde, valores)
+        return cur.fetchone()["n"]
 
 
 def _usuarios(cur, filas: list[dict]) -> dict[str, str]:
@@ -146,9 +153,12 @@ def consultar_bitacora(
         sujeto: str | None = _SUJETO,
         tipo: str | None = _TIPO,
         resultado: str | None = _RESULTADO,
-        antes: int | None = Query(default=None, gt=0),
-        limite: int = Query(default=LIMITE_LISTADO, gt=0, le=LIMITE_MAXIMO),
+        pagina: int = Query(default=1, gt=0, le=100_000),
+        por_pagina: int = Query(default=POR_PAGINA_OMISION),
 ) -> dict:
+    if por_pagina not in POR_PAGINA:
+        raise ErrorAPI(422, "por_pagina_invalido",
+                       "Se muestran 10, 25 o 50 eventos por página.")
     with bd.transaccion() as cur:
         # C7 depende de quien pregunta, no de la fila: un solo autorizar
         # decide todo el listado. Si niega, queda registrado y es 403.
@@ -157,8 +167,13 @@ def consultar_bitacora(
 
         donde, valores = _filtro(desde=desde, hasta=hasta, accion=accion,
                                  sujeto=sujeto, tipo=tipo,
-                                 resultado=resultado, antes=antes)
-        filas = _leer(donde, valores, limite)
+                                 resultado=resultado)
+        total = _contar(donde, valores)
+        paginas = max(1, -(-total // por_pagina))
+        # Una pagina que ya no existe (por ejemplo, tras filtrar) muestra la
+        # ultima en vez de una tabla vacia.
+        pagina = min(pagina, paginas)
+        filas = _leer(donde, valores, por_pagina, (pagina - 1) * por_pagina)
         usuarios = _usuarios(cur, filas)
 
         # Lo que todavia esta en la bandeja, sin transmitir. Ayuda a entender
@@ -178,8 +193,13 @@ def consultar_bitacora(
 
     return {
         "eventos": [_json(f, usuarios) for f in filas],
-        # Para pedir la pagina siguiente: ?antes=<siguiente>
-        "siguiente": filas[-1]["secuencia"] if len(filas) == limite else None,
+        "total": total,
+        "pagina": pagina,
+        "paginas": paginas,
+        "por_pagina": por_pagina,
+        # Posicion de la primera fila de la pagina, contando desde 1, para
+        # que el borde numere "1-25 de 91" sin depender de la secuencia.
+        "primera_fila": (pagina - 1) * por_pagina + 1 if filas else 0,
         "pendientes_de_transmitir": pendientes,
     }
 
@@ -206,7 +226,7 @@ def exportar_bitacora(
                   atributos=q.atributos_sujeto(cur, sesion))
         donde, valores = _filtro(desde=desde, hasta=hasta, accion=accion,
                                  sujeto=sujeto, tipo=tipo,
-                                 resultado=resultado, antes=None)
+                                 resultado=resultado)
         filas = _leer(donde, valores, LIMITE_EXPORTACION)
         registrar(accion="BITACORA_EXPORTADA", sujeto=sesion.sujeto.id,
                   objeto="O11:*", resultado="PERMITIDO",
