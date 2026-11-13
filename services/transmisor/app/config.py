@@ -174,6 +174,13 @@ EVENTOS_POR_CORRIDA = _entero("EVENTOS_POR_CORRIDA", 500)
 MARGEN_SEGUNDOS = _entero("MARGEN_TRANSMISION_SEGUNDOS", 120)
 
 
+# --- El volcado -------------------------------------------------------------
+
+# El deposito de Cloud Storage donde `volcado` deja la copia de la bitacora.
+# No es secreto: es un nombre, y sin permiso de la cuenta no sirve de nada.
+VOLCADO_DEPOSITO = _texto("VOLCADO_DEPOSITO", "") or None
+
+
 def resumen() -> dict:
     """Lo que se puede mostrar en /salud o en un registro. Sin secretos."""
     return {
@@ -185,4 +192,5 @@ def resumen() -> dict:
         "llave_cadena_configurada": LLAVE_CADENA is not None,
         "eventos_por_corrida": EVENTOS_POR_CORRIDA,
         "margen_segundos": MARGEN_SEGUNDOS,
+        "volcado_deposito": VOLCADO_DEPOSITO,
     }
