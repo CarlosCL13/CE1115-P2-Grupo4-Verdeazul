@@ -73,3 +73,5 @@ docs/Docs_P1/
 *.sql.gz
 *.backup
 db/volcados/
+
+docs/Propuesta_reparto_Adriel_Meibel.md
