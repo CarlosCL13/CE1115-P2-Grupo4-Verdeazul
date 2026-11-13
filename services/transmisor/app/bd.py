@@ -53,3 +53,33 @@ def bandeja():
 def bitacora():
     """log_writer sobre verdeazul-bitacora. Solo puede insertar en eventos."""
     return _transaccion(config.BITACORA_URL, "VERDEAZUL_BITACORA_URL")
+
+
+def lectura():
+    """log_reader sobre verdeazul-bitacora. Solo puede leer eventos."""
+    return _transaccion(config.BITACORA_LECTURA_URL,
+                        "VERDEAZUL_BITACORA_LECTURA_URL")
+
+
+# Quien actua cuando la accion la hace el sistema y no una persona: una
+# revocacion por vencimiento, una comprobacion de la cadena. El contrato 03
+# pide el id de quien actuo; aqui no hay cuenta, y ANONIMO diria otra cosa.
+SISTEMA = "SISTEMA"
+
+
+def anotar(cur, eventos: list[tuple[str, str, dict]]) -> None:
+    """Escribe eventos en la bandeja con el cursor de `bandeja()`.
+
+    Cada uno es (accion, objeto, detalle). Van en la misma transaccion que lo
+    que describen, como en la API: si la revocacion se confirma, su evento
+    esta. Los encadena despues `transmitir`, igual que a los demas.
+    """
+    if not eventos:
+        return
+    from psycopg.types.json import Jsonb
+    cur.executemany(
+        "INSERT INTO eventos_pendientes "
+        "(accion, sujeto, objeto, resultado, detalle) "
+        "VALUES (%s, %s, %s, 'PERMITIDO', %s)",
+        [(accion, SISTEMA, objeto, Jsonb(detalle))
+         for accion, objeto, detalle in eventos])

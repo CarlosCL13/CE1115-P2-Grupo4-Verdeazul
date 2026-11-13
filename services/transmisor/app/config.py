@@ -147,6 +147,11 @@ BANDEJA_URL = _conexion("VERDEAZUL_OUTBOX_URL")
 # ni modifica. El eslabon anterior lo saca de la bandeja, no de aqui.
 BITACORA_URL = _conexion("VERDEAZUL_BITACORA_URL")
 
+# log_reader en verdeazul-bitacora. Solo SELECT. Lo usa la tarea `cadena`
+# para releer la bitacora entera y recalcular cada eslabon. Es otra cadena y
+# otro rol a proposito: la que escribe no lee y la que lee no escribe.
+BITACORA_LECTURA_URL = _conexion("VERDEAZUL_BITACORA_LECTURA_URL")
+
 TIEMPO_LIMITE_CONSULTA_MS = _entero("TIEMPO_LIMITE_CONSULTA_MS", 30_000)
 
 
@@ -176,6 +181,7 @@ def resumen() -> dict:
         "entorno": ENTORNO,
         "bandeja_configurada": BANDEJA_URL is not None,
         "bitacora_configurada": BITACORA_URL is not None,
+        "lectura_configurada": BITACORA_LECTURA_URL is not None,
         "llave_cadena_configurada": LLAVE_CADENA is not None,
         "eventos_por_corrida": EVENTOS_POR_CORRIDA,
         "margen_segundos": MARGEN_SEGUNDOS,

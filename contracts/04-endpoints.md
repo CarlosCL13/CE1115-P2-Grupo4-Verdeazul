@@ -331,8 +331,8 @@ reescribir.
 | Endpoint | Para qué sirve | Necesita | Cubre | Estado |
 |---|---|---|---|---|
 | `POST /tareas/transmitir` | Copia los eventos de la bandeja de salida a la base de bitácora | **cuarto rol de BD**: leer la bandeja y marcar enviado | Despliegue 16, Correspondencia P1 7 | Hecho, con pruebas sin base. Falta activar el Scheduler |
-| `POST /tareas/vencer` | Desactiva asignaciones y autorizaciones vencidas (HBAC-03) | tablas de O7 y O8 | Correspondencia P1 7 | **Pendiente** |
-| `POST /tareas/cadena` | Comprueba que la cadena HMAC cuadra de punta a punta | — | Informe 10 | **Pendiente** |
+| `POST /tareas/vencer` | Desactiva asignaciones y autorizaciones vencidas (HBAC-03) | tablas de O7 y O8 | Correspondencia P1 7 | Hecho. Migración 014; un evento por revocación, sujeto `SISTEMA` |
+| `POST /tareas/cadena` | Comprueba que la cadena HMAC cuadra de punta a punta | — | Informe 10 | Hecho. También la cola contra la bandeja; 409 si está rota |
 | `POST /tareas/volcado` | `pg_dump` a Cloud Storage para la retención de diez años | bucket con bloqueo | Correspondencia P1 7 | **Pendiente**: D-03 y D-07 lo citan como compensación |
 
 Este servicio es el único que no expone nada al navegador. Y es la prueba viva de

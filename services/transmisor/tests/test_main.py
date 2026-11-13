@@ -15,9 +15,23 @@ def test_tarea_desconocida(cliente):
     assert cliente.post("/tareas/borrar").status_code == 404
 
 
-@pytest.mark.parametrize("nombre", ["vencer", "cadena", "volcado"])
-def test_las_que_faltan_responden_501(cliente, nombre):
-    assert cliente.post(f"/tareas/{nombre}").status_code == 501
+def test_la_que_falta_responde_501(cliente):
+    assert cliente.post("/tareas/volcado").status_code == 501
+
+
+def test_una_cadena_rota_responde_409_con_el_informe(cliente, monkeypatch):
+    informe = {"tarea": "cadena", "intacta": False, "rotos": 1,
+               "primer_roto": 42}
+    monkeypatch.setitem(main.IMPLEMENTADAS, "cadena", lambda: informe)
+    r = cliente.post("/tareas/cadena")
+    assert r.status_code == 409
+    assert r.json() == informe
+
+
+def test_una_cadena_intacta_responde_200(cliente, monkeypatch):
+    monkeypatch.setitem(main.IMPLEMENTADAS, "cadena",
+                        lambda: {"tarea": "cadena", "intacta": True})
+    assert cliente.post("/tareas/cadena").status_code == 200
 
 
 def test_transmitir_devuelve_lo_que_hizo(cliente, monkeypatch):

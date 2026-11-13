@@ -25,7 +25,7 @@ from fastapi.responses import JSONResponse
 # Se importa al arrancar: si falta un secreto en la nube, el contenedor no
 # llega a estar sano y Cloud Run sigue sirviendo la revision anterior.
 from app import bd, config, eslabon
-from app.tareas import transmitir
+from app.tareas import cadena, transmitir, vencer
 
 # Cloud Run guarda lo que sale por la salida estandar en Cloud Logging. Sin
 # esto, los log.info de las tareas no se ven.
@@ -41,11 +41,13 @@ TAREAS = ("transmitir", "vencer", "cadena", "volcado")
 # registros que la tarea existe pero todavia no esta escrita.
 IMPLEMENTADAS = {
     "transmitir": transmitir.ejecutar,
+    "vencer": vencer.ejecutar,
+    "cadena": cadena.ejecutar,
 }
 
 
 @app.post("/tareas/{nombre}")
-def ejecutar(nombre: str) -> dict:
+def ejecutar(nombre: str):
     """Ejecuta una tarea programada.
 
     Sin detalles del error al cliente: el detalle va a los registros. Un
@@ -58,7 +60,13 @@ def ejecutar(nombre: str) -> dict:
     if tarea is None:
         raise HTTPException(status_code=501, detail=f"{nombre}: sin implementar")
     try:
-        return tarea()
+        resultado = tarea()
+        # Una cadena rota no es un fallo del transmisor, es un hallazgo. Se
+        # responde 409 para que la corrida salga en rojo en Cloud Scheduler
+        # y alguien lo mire; el informe va en el cuerpo, sin secretos.
+        if resultado.get("intacta") is False:
+            return JSONResponse(status_code=409, content=resultado)
+        return resultado
     except (bd.SinConexion, eslabon.LlaveInvalida):
         log.exception("%s: falta configuracion", nombre)
         raise HTTPException(status_code=503,
@@ -77,7 +85,8 @@ def salud() -> JSONResponse:
     Neon. Sin detalles del error al cliente; el detalle va a los registros.
     """
     estado = {}
-    for nombre, abrir in (("bandeja", bd.bandeja), ("bitacora", bd.bitacora)):
+    for nombre, abrir in (("bandeja", bd.bandeja), ("bitacora", bd.bitacora),
+                          ("lectura", bd.lectura)):
         try:
             with abrir() as cur:
                 cur.execute("SELECT 1")

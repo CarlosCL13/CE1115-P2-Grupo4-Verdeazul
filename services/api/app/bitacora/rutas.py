@@ -141,7 +141,10 @@ _HASTA = Query(default=None, description="AAAA-MM-DD, en UTC, incluido")
 # Mayusculas, digitos y guion bajo, como los nombres de accion. Sin comillas,
 # espacios ni % o _ sueltos de LIKE: igual va por igualdad y parametrizada.
 _ACCION = Query(default=None, max_length=60, pattern="^[A-Z0-9_]+$")
-_SUJETO = Query(default=None, max_length=40, pattern="^[0-9]+$|^ANONIMO$")
+# SISTEMA es quien actua en lo que hace el transmisor solo: revocar lo
+# vencido (vencer) y comprobar la cadena (cadena).
+_SUJETO = Query(default=None, max_length=40,
+                pattern="^[0-9]+$|^ANONIMO$|^SISTEMA$")
 _TIPO = Query(default=None, pattern="^O([1-9]|1[01])$")
 _RESULTADO = Query(default=None, pattern="^(PERMITIDO|DENEGADO)$")
 

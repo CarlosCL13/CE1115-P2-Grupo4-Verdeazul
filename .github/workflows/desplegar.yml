@@ -220,7 +220,7 @@ jobs:
             --concurrency=1 \
             --memory=256Mi \
             --set-env-vars=APP_VERSION=${GITHUB_SHA::7} \
-            --set-secrets=VERDEAZUL_OUTBOX_URL=verdeazul-outbox-url:latest,VERDEAZUL_BITACORA_URL=verdeazul-bitacora-escritura-url:latest,LLAVE_CADENA_BITACORA=llave-cadena-bitacora:latest
+            --set-secrets=VERDEAZUL_OUTBOX_URL=verdeazul-outbox-url:latest,VERDEAZUL_BITACORA_URL=verdeazul-bitacora-escritura-url:latest,VERDEAZUL_BITACORA_LECTURA_URL=verdeazul-bitacora-lectura-url:latest,LLAVE_CADENA_BITACORA=llave-cadena-bitacora:latest
           URL=$(gcloud run services describe verdeazul-transmisor --region=${{ env.REGION }} --format="value(status.url)")
           echo "### Transmisor (cerrado a internet)" >> "$GITHUB_STEP_SUMMARY"
           echo "$URL" >> "$GITHUB_STEP_SUMMARY"
