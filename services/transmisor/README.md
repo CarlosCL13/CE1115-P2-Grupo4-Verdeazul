@@ -227,12 +227,75 @@ En local, el `.env` lleva además:
 VERDEAZUL_BITACORA_LECTURA_URL=  (secreto verdeazul-bitacora-lectura-url)
 ```
 
-## `volcado`
+## `volcado`: la copia de la bitácora fuera de Neon
 
-**`volcado`** es el respaldo con retención bloqueada que D-03 y D-07 prometen
-como compensación: la copia separada de BI-03 y la retención de diez años de
-BI-04. Si no da el tiempo se puede recortar, pero entonces hay que corregir esas
-dos desviaciones, que hoy lo dan por hecho.
+`app/tareas/volcado.py`. Lee la bitácora entera con `log_reader` y la sube a
+Cloud Storage, al depósito `verdeazul-g4-volcados`, como dos objetos:
+
+```
+bitacora/AAAA/MM/DD/bitacora-AAAAMMDDTHHMMSSZ.jsonl.gz   un evento por línea, con secuencia y eslabón
+bitacora/AAAA/MM/DD/bitacora-AAAAMMDDTHHMMSSZ.json       el manifiesto
+```
+
+El manifiesto trae cuántos eventos hay, de qué secuencia a cuál, el último
+eslabón, el SHA-256 del archivo y si la cadena cuadraba al copiarla. Con el
+archivo y la llave se recalcula cada eslabón **sin acceso a Neon**: es la copia
+externa que D-03 da como compensación. Deja su propio evento,
+`VOLCADO_REALIZADO`, con el SHA-256.
+
+Es la copia de diez años de BI-03, BI-04 y LG-06, y solo de la bitácora (D-07):
+la base principal queda con la restauración de seis horas de Neon.
+
+**Por qué no se puede borrar.** El depósito tiene una política de retención de
+diez años: ningún objeto se puede borrar ni reemplazar antes, ni siquiera desde
+la consola. La cuenta del transmisor tiene solo `roles/storage.objectCreator`
+sobre ese depósito: crea, pero no lee, no reemplaza y no borra. Y cada subida
+pide `ifGenerationMatch=0`, así que un volcado nunca pisa a otro.
+
+**Por qué la retención no está bloqueada.** Bloquearla es irreversible: el
+depósito no se podría borrar en diez años y Google le pone un gravamen al
+proyecto para que tampoco se pueda borrar. En un proyecto académico no lo
+hacemos; en producción se bloquea, con
+`gcloud storage buckets update gs://... --lock-retention-period`. Sin bloquear,
+un administrador del proyecto podría quitar la política: es el riesgo que queda,
+y está en D-07.
+
+Sin dependencias nuevas: la subida es un POST a la API JSON de Cloud Storage
+con la biblioteca estándar (`app/almacen.py`). El token sale del servidor de
+metadatos de Cloud Run; en local, de `VOLCADO_TOKEN`.
+
+### Montarlo (una vez, quien sea administrador del proyecto)
+
+El depósito, en `us-east1` porque ahí aplica la capa gratuita de Cloud
+Storage (5 GB al mes; la bitácora entera pesa unos kilobytes):
+
+```bash
+gcloud storage buckets create gs://verdeazul-g4-volcados --project=verdeazul-g4 --location=us-east1 --uniform-bucket-level-access --public-access-prevention --retention-period=10y
+```
+
+El permiso del transmisor, solo para crear:
+
+```bash
+gcloud storage buckets add-iam-policy-binding gs://verdeazul-g4-volcados --member=serviceAccount:verdeazul-transmisor@verdeazul-g4.iam.gserviceaccount.com --role=roles/storage.objectCreator
+```
+
+La corrida semanal, los lunes a las 07:00 UTC. La invoca la misma cuenta que
+`transmitir-bitacora`:
+
+```bash
+gcloud scheduler jobs create http volcado-bitacora --project=verdeazul-g4 --location=us-east4 --schedule="0 7 * * 1" --time-zone=Etc/UTC --http-method=POST --uri=https://verdeazul-transmisor-igwgmkeipa-uk.a.run.app/tareas/volcado --oidc-service-account-email=verdeazul-planificador@verdeazul-g4.iam.gserviceaccount.com --oidc-token-audience=https://verdeazul-transmisor-igwgmkeipa-uk.a.run.app --attempt-deadline=300s
+```
+
+### Probarlo en local
+
+```bash
+$env:VOLCADO_DEPOSITO = "verdeazul-g4-volcados"
+$env:VOLCADO_TOKEN = (gcloud auth print-access-token)
+cd services/transmisor; ..\..\.venv\Scripts\python.exe -c "from app.tareas import volcado; print(volcado.ejecutar())"; cd ..\..
+```
+
+Lo subido se ve en la consola, Cloud Storage → `verdeazul-g4-volcados`. No se
+puede borrar: es lo que se quiere demostrar.
 
 D-11 nombra además el reporte semanal de HBAC-02, que no está entre estas
 tareas. Está en las decisiones abiertas de las desviaciones.

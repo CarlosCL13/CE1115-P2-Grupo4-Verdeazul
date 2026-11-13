@@ -15,8 +15,17 @@ def test_tarea_desconocida(cliente):
     assert cliente.post("/tareas/borrar").status_code == 404
 
 
-def test_la_que_falta_responde_501(cliente):
-    assert cliente.post("/tareas/volcado").status_code == 501
+def test_las_cuatro_tareas_estan_escritas():
+    assert set(main.IMPLEMENTADAS) == set(main.TAREAS)
+
+
+def test_volcado_sin_deposito_es_503(cliente, monkeypatch):
+    from app import almacen
+
+    def falla():
+        raise almacen.SinDeposito("x")
+    monkeypatch.setitem(main.IMPLEMENTADAS, "volcado", falla)
+    assert cliente.post("/tareas/volcado").status_code == 503
 
 
 def test_una_cadena_rota_responde_409_con_el_informe(cliente, monkeypatch):

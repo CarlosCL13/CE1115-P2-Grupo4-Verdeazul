@@ -25,7 +25,8 @@ from fastapi.responses import JSONResponse
 # Se importa al arrancar: si falta un secreto en la nube, el contenedor no
 # llega a estar sano y Cloud Run sigue sirviendo la revision anterior.
 from app import bd, config, eslabon
-from app.tareas import cadena, transmitir, vencer
+from app import almacen
+from app.tareas import cadena, transmitir, vencer, volcado
 
 # Cloud Run guarda lo que sale por la salida estandar en Cloud Logging. Sin
 # esto, los log.info de las tareas no se ven.
@@ -43,6 +44,7 @@ IMPLEMENTADAS = {
     "transmitir": transmitir.ejecutar,
     "vencer": vencer.ejecutar,
     "cadena": cadena.ejecutar,
+    "volcado": volcado.ejecutar,
 }
 
 
@@ -67,7 +69,7 @@ def ejecutar(nombre: str):
         if resultado.get("intacta") is False:
             return JSONResponse(status_code=409, content=resultado)
         return resultado
-    except (bd.SinConexion, eslabon.LlaveInvalida):
+    except (bd.SinConexion, eslabon.LlaveInvalida, almacen.SinDeposito):
         log.exception("%s: falta configuracion", nombre)
         raise HTTPException(status_code=503,
                             detail=f"{nombre}: sin configurar") from None
