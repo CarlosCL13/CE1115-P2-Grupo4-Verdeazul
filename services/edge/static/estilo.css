@@ -105,3 +105,93 @@ td:last-child { white-space: nowrap; }
 /* Certificacion */
 textarea { font-family: ui-monospace, monospace; }
 pre { margin: 0; font-size: 0.85rem; }
+
+/* Entrar: el camino a la verificacion publica, que ya no esta en la raiz. */
+.aviso-publico {
+  max-width: 30rem; margin-top: 1.5rem; padding: 0.6rem 0.8rem;
+  border-left: 3px solid var(--verde); background: #eef6f1; font-size: 0.9rem;
+}
+
+/* Bitacora (O11). Todo bajo .bitacora para no tocar las demas paginas. */
+main:has(.bitacora) { max-width: 78rem; }
+.bitacora { --suave: #eef6f1; --rojo-suave: #fbeaea; }
+.bitacora .bit-cabecera { display: flex; justify-content: space-between; align-items: flex-start; gap: 1.5rem; }
+.bitacora .bit-cabecera .nota { max-width: 44rem; margin-top: 0; }
+.bitacora .boton-sec {
+  flex-shrink: 0; padding: 0.45rem 0.9rem; border: 1px solid var(--verde);
+  border-radius: 3px; color: var(--verde); text-decoration: none; white-space: nowrap;
+}
+.bitacora .boton-sec:hover { background: var(--suave); }
+.bitacora .aviso {
+  padding: 0.5rem 0.8rem; border-left: 3px solid var(--verde);
+  background: var(--suave); font-size: 0.9rem;
+}
+
+/* Filtros: una tarjeta en cuadricula. Un campo con valor se marca con el
+   color de la marca, para ver de un vistazo que esta filtrando. */
+.bitacora form.filtros {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem 1rem; max-width: none; margin: 1rem 0 0.5rem;
+  padding: 1rem; border: 1px solid var(--borde); border-radius: 6px; background: #fff;
+}
+.bitacora .campo { display: flex; flex-direction: column; gap: 0.25rem; }
+.bitacora .campo input, .bitacora .campo select { width: 100%; }
+.bitacora .campo.activo label { color: var(--verde); font-weight: 600; }
+.bitacora .campo.activo input, .bitacora .campo.activo select {
+  border-color: var(--verde); background: var(--suave); box-shadow: inset 3px 0 0 var(--verde);
+}
+.bitacora .filtros .acciones { grid-column: 1 / -1; display: flex; align-items: center; gap: 1rem; }
+.bitacora .filtros .acciones button { margin: 0; }
+.bitacora .filtros .acciones a { color: var(--rojo); font-size: 0.9rem; }
+
+.bitacora .etiquetas { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; margin: 0.6rem 0; }
+.bitacora .etiqueta {
+  display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.15rem 0.6rem;
+  border: 1px solid var(--verde); border-radius: 999px; background: var(--suave);
+  color: var(--verde); font-size: 0.85rem; text-decoration: none;
+}
+.bitacora a.etiqueta:hover { background: var(--rojo-suave); border-color: var(--rojo); color: var(--rojo); }
+.bitacora .etiqueta.neutra { border-color: var(--borde); background: transparent; color: var(--apagado); }
+
+/* La tabla: filas alternadas, columnas que no se rompen y desplazamiento
+   horizontal solo en pantallas angostas. */
+.bitacora .tabla-envoltura { overflow-x: auto; border: 1px solid var(--borde); border-radius: 6px; }
+.bitacora table.tabla-bitacora { margin: 0; font-size: 0.9rem; }
+.bitacora .tabla-bitacora th { background: #f4f4f1; position: sticky; top: 0; }
+.bitacora .tabla-bitacora tbody tr:nth-child(even) { background: #fafaf8; }
+.bitacora .tabla-bitacora tbody tr:hover { background: var(--suave); }
+.bitacora .tabla-bitacora td { vertical-align: top; }
+.bitacora .tabla-bitacora td:last-child { white-space: normal; }
+.bitacora .num { width: 3rem; text-align: right; color: var(--apagado); }
+.bitacora .momento { white-space: nowrap; }
+.bitacora .mono { font-family: ui-monospace, monospace; font-size: 0.82rem; word-break: break-word; }
+.bitacora .detalle { font-size: 0.82rem; min-width: 14rem; }
+.bitacora .motivo { margin-top: 0.2rem; max-width: 16rem; }
+.bitacora .vacio { text-align: center; padding: 2rem; color: var(--apagado); }
+.bitacora .insignia { display: inline-block; padding: 0.05rem 0.5rem; border-radius: 999px; font-size: 0.78rem; font-weight: 600; }
+.bitacora .insignia.permitido { background: var(--suave); color: var(--verde); }
+.bitacora .insignia.denegado { background: var(--rojo-suave); color: var(--rojo); }
+
+.bitacora .paginador {
+  display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center;
+  gap: 0.75rem; margin: 0.8rem 0;
+}
+.bitacora .paginas { display: flex; flex-wrap: wrap; gap: 0.25rem; }
+.bitacora .paginas a, .bitacora .paginas span {
+  min-width: 2.1rem; padding: 0.25rem 0.55rem; border: 1px solid var(--borde);
+  border-radius: 3px; text-align: center; text-decoration: none; color: var(--verde);
+}
+.bitacora .paginas a:hover { background: var(--suave); }
+.bitacora .paginas .actual { background: var(--verde); border-color: var(--verde); color: #fff; font-weight: 600; }
+.bitacora .paginas .apagada { color: var(--borde); }
+.bitacora .paginas .salto { border-color: transparent; color: var(--apagado); }
+.bitacora .tamanos a { margin: 0 0.2rem; }
+.bitacora .tamanos strong { margin: 0 0.2rem; color: var(--tinta); }
+
+@media (max-width: 52rem) {
+  .bitacora form.filtros { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 40rem) {
+  .bitacora .bit-cabecera { flex-direction: column; }
+  .bitacora form.filtros { grid-template-columns: 1fr; }
+}

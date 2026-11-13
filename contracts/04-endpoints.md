@@ -315,8 +315,8 @@ Verdeazul por un canal aparte.
 
 | Endpoint | Para qué sirve | Necesita | Cubre | Estado |
 |---|---|---|---|---|
-| `GET /bitacora` | DG, Dirección de Certificación y administrativo consultan el registro | base de bitácora | Informe 10 | **Pendiente** |
-| `GET /bitacora/exportar` | El auditor externo se lleva el registro de su alcance | C7, cadena verificable | Informe 10 | **Pendiente** |
+| `GET /bitacora` | DG, Dirección de Certificación y administrativo consultan el registro | base de bitácora | Informe 10 | Hecho. Filtros por fecha, acción, sujeto, objeto y resultado; páginas de 100 |
+| `GET /bitacora/exportar` | El auditor externo se lleva el registro de su alcance | C7, cadena verificable | Informe 10 | Hecho. CSV en el orden de la cadena, con eslabón; tope de 5000 filas |
 
 Lo más importante de la persona 5 no es un endpoint: es `registrar.py`, la
 función que los otros cuatro llaman desde el día uno. Tiene que existir con
@@ -330,7 +330,7 @@ reescribir.
 
 | Endpoint | Para qué sirve | Necesita | Cubre | Estado |
 |---|---|---|---|---|
-| `POST /tareas/transmitir` | Copia los eventos de la bandeja de salida a la base de bitácora | **cuarto rol de BD**: leer la bandeja y marcar enviado | Despliegue 16, Correspondencia P1 7 | **Pendiente** |
+| `POST /tareas/transmitir` | Copia los eventos de la bandeja de salida a la base de bitácora | **cuarto rol de BD**: leer la bandeja y marcar enviado | Despliegue 16, Correspondencia P1 7 | Hecho, con pruebas sin base. Falta activar el Scheduler |
 | `POST /tareas/vencer` | Desactiva asignaciones y autorizaciones vencidas (HBAC-03) | tablas de O7 y O8 | Correspondencia P1 7 | **Pendiente** |
 | `POST /tareas/cadena` | Comprueba que la cadena HMAC cuadra de punta a punta | — | Informe 10 | **Pendiente** |
 | `POST /tareas/volcado` | `pg_dump` a Cloud Storage para la retención de diez años | bucket con bloqueo | Correspondencia P1 7 | **Pendiente**: D-03 y D-07 lo citan como compensación |

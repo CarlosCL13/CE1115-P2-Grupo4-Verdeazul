@@ -20,7 +20,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app import api
 from app.web import (RAIZ, VERSION, Denegada, FalloDelBackend, Redirigir,
-                     ir, mensaje_de, pagina)
+                     ir, mensaje_de, pagina, sesion, token)
 
 app = FastAPI(
     title="Verdeazul Carbono",
@@ -110,17 +110,32 @@ async def _caido(request: Request, _error: Exception):
 # Paginas
 # ---------------------------------------------------------------------------
 
-@app.get("/", response_class=HTMLResponse)
+@app.get("/")
 def inicio(request: Request):
+    """La raiz no tiene contenido propio: lleva a donde corresponde.
+
+    Con sesion, al panel; sin sesion, a entrar. Es solo navegacion: no abre
+    ni cierra nada, y quien no tiene sesion no ve nada que antes no viera.
+    """
+    return ir("/panel" if token(request) and sesion(request) else "/entrar")
+
+
+@app.get("/verificar", response_class=HTMLResponse)
+def verificar(request: Request):
+    """Verificacion publica de certificados (D-09). Sin sesion, a proposito:
+    un comprador en otro pais tiene que poder usarla sin cuenta. Antes vivia
+    en la raiz; desde /entrar hay un enlace visible hasta aqui."""
     return pagina(request, "inicio.html")
 
 
 # Aqui va una linea por modulo, a medida que existan:
 from app.identidad import router as router_identidad  # noqa: E402
 from app.certificacion import router as router_certificacion  # noqa: E402
+from app.bitacora import router as router_bitacora  # noqa: E402
 
 app.include_router(router_identidad)
 app.include_router(router_certificacion)
+app.include_router(router_bitacora)
 
 
 __all__ = ["app", "VERSION"]

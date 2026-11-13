@@ -17,28 +17,56 @@ Lo que ya esta listo para escribirlas (config, conexiones, permisos y como
 deberia funcionar cada una) esta en el README de esta carpeta.
 """
 
+import logging
+
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 
 # Se importa al arrancar: si falta un secreto en la nube, el contenedor no
 # llega a estar sano y Cloud Run sigue sirviendo la revision anterior.
-from app import bd, config
+from app import bd, config, eslabon
+from app.tareas import transmitir
+
+# Cloud Run guarda lo que sale por la salida estandar en Cloud Logging. Sin
+# esto, los log.info de las tareas no se ven.
+logging.basicConfig(level=logging.INFO,
+                    format="%(levelname)s %(name)s: %(message)s")
+log = logging.getLogger("transmisor")
 
 app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
 
 TAREAS = ("transmitir", "vencer", "cadena", "volcado")
+
+# Las que ya hacen algo. Las demas responden 501, para que se note en los
+# registros que la tarea existe pero todavia no esta escrita.
+IMPLEMENTADAS = {
+    "transmitir": transmitir.ejecutar,
+}
 
 
 @app.post("/tareas/{nombre}")
 def ejecutar(nombre: str) -> dict:
     """Ejecuta una tarea programada.
 
-    PENDIENTE: implementar cada tarea. El relleno responde 501 para que se
-    note en los registros que la tarea existe pero no hace nada.
+    Sin detalles del error al cliente: el detalle va a los registros. Un
+    codigo distinto de 2xx hace que Cloud Scheduler marque la corrida como
+    fallida, que es lo que se revisa en la consola.
     """
     if nombre not in TAREAS:
         raise HTTPException(status_code=404, detail="tarea desconocida")
-    raise HTTPException(status_code=501, detail=f"{nombre}: sin implementar")
+    tarea = IMPLEMENTADAS.get(nombre)
+    if tarea is None:
+        raise HTTPException(status_code=501, detail=f"{nombre}: sin implementar")
+    try:
+        return tarea()
+    except (bd.SinConexion, eslabon.LlaveInvalida):
+        log.exception("%s: falta configuracion", nombre)
+        raise HTTPException(status_code=503,
+                            detail=f"{nombre}: sin configurar") from None
+    except Exception:
+        log.exception("%s: fallo la corrida", nombre)
+        raise HTTPException(status_code=500,
+                            detail=f"{nombre}: fallo") from None
 
 
 @app.get("/salud")

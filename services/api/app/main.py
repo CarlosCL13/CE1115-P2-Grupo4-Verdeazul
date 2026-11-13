@@ -72,11 +72,15 @@ from app.auth import router as router_auth  # noqa: E402
 from app.personas import router as router_personas  # noqa: E402
 from app.cuentas import router as router_cuentas  # noqa: E402
 from app.certificacion import router as router_certificacion  # noqa: E402
+# Desde rutas y no desde app.bitacora: el paquete lo importa auth para
+# registrar(), y rutas importa auth. Por el paquete seria un ciclo.
+from app.bitacora.rutas import router as router_bitacora  # noqa: E402
 
 app.include_router(router_auth)
 app.include_router(router_personas)
 app.include_router(router_cuentas)
 app.include_router(router_certificacion)
+app.include_router(router_bitacora)
 
 
 def _estado_del_motor() -> dict[str, object]:
