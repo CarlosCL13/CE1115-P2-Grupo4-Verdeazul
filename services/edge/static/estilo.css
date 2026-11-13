@@ -112,6 +112,47 @@ pre { margin: 0; font-size: 0.85rem; }
   border-left: 3px solid var(--verde); background: #eef6f1; font-size: 0.9rem;
 }
 
+/* Enmiendas (O4). */
+.enmiendas .aviso {
+  padding: 0.5rem 0.8rem; border-left: 3px solid var(--verde);
+  background: #eef6f1; font-size: 0.9rem;
+}
+.enmiendas ol.flujo {
+  display: flex; flex-wrap: wrap; gap: 0.5rem; padding: 0; margin: 1rem 0;
+  list-style: none; counter-reset: paso;
+}
+.enmiendas ol.flujo li {
+  flex: 1 1 12rem; padding: 0.5rem 0.75rem; border: 1px solid var(--borde);
+  border-radius: 6px; background: #fff; counter-increment: paso;
+}
+.enmiendas ol.flujo li strong::before { content: counter(paso) ". "; color: var(--verde); }
+.enmiendas ol.flujo li span { display: block; font-size: 0.8rem; color: var(--apagado); }
+.enmiendas .pestanas { display: flex; flex-wrap: wrap; gap: 0.25rem; border-bottom: 1px solid var(--borde); margin: 1rem 0 0; }
+.enmiendas .pestanas a {
+  padding: 0.4rem 0.8rem; color: var(--apagado); text-decoration: none;
+  border-bottom: 3px solid transparent; margin-bottom: -1px;
+}
+.enmiendas .pestanas a:hover { color: var(--verde); }
+.enmiendas .pestanas a.actual { color: var(--verde); border-bottom-color: var(--verde); font-weight: 600; }
+.enmiendas .tabla-envoltura { overflow-x: auto; }
+.enmiendas table { font-size: 0.9rem; }
+.enmiendas td { vertical-align: top; }
+.enmiendas .justificacion { max-width: 22rem; }
+.enmiendas .personas { font-size: 0.85rem; white-space: nowrap; }
+.enmiendas td.acciones { white-space: normal; }
+.enmiendas td.acciones form + form { margin-top: 0.3rem; }
+.enmiendas .vacio { text-align: center; padding: 2rem; color: var(--apagado); }
+.enmiendas .insignia { display: inline-block; padding: 0.05rem 0.5rem; border-radius: 999px; font-size: 0.78rem; font-weight: 600; }
+.enmiendas .insignia.solicitada { background: #fff4d6; color: #7a5a00; }
+.enmiendas .insignia.revisada { background: #e3eefb; color: #1d4f8a; }
+.enmiendas .insignia.cerrada { background: #eef6f1; color: var(--verde); }
+.enmiendas .insignia.devuelta { background: #fbeaea; color: var(--rojo); }
+.enmiendas button.secundario { background: #fff; color: var(--rojo); border: 1px solid var(--rojo); }
+.enmiendas form.tarjeta {
+  max-width: 34rem; padding: 1rem; border: 1px solid var(--borde);
+  border-radius: 6px; background: #fff;
+}
+
 /* Bitacora (O11). Todo bajo .bitacora para no tocar las demas paginas. */
 main:has(.bitacora) { max-width: 78rem; }
 .bitacora { --suave: #eef6f1; --rojo-suave: #fbeaea; }
