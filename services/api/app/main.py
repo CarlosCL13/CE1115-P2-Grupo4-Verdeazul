@@ -77,6 +77,7 @@ from app.certificacion import router as router_certificacion  # noqa: E402
 from app.bitacora.rutas import router as router_bitacora  # noqa: E402
 from app.enmiendas import router as router_enmiendas  # noqa: E402
 from app.concesiones import router as router_concesiones  # noqa: E402
+from app.certificados.rutas import router as router_certificados  # noqa: E402
 
 app.include_router(router_auth)
 app.include_router(router_personas)
@@ -85,6 +86,8 @@ app.include_router(router_certificacion)
 app.include_router(router_bitacora)
 app.include_router(router_enmiendas)
 app.include_router(router_concesiones)
+app.include_router(router_certificados)
+
 
 
 def _estado_del_motor() -> dict[str, object]:
