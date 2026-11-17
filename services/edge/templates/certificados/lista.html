@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block titulo %}Certificados · Verdeazul Carbono{% endblock %}
+
+{% block contenido %}
+<div class="certificados">
+
+<h1>Certificados de carbono</h1>
+<p class="nota">
+  Cada certificado va firmado con la llave privada de Verdeazul, y lleva
+  dentro la clave pública para que cualquiera lo pueda comprobar sin acceso
+  al sistema. Un certificado no se edita: si hay que corregirlo se anula y
+  se emite otro. Nunca hay dos vigentes sobre el mismo terreno (C6).
+</p>
+
+{% if ok %}<p class="aviso">{{ ok }}</p>{% endif %}
+{% if error %}<p class="error">{{ error }}</p>{% endif %}
+
+<nav class="pestanas" aria-label="Filtrar por estado">
+  <a href="/certificados" class="{{ 'actual' if not filtro_estado }}">Todos</a>
+  <a href="/certificados?estado=VIGENTE" class="{{ 'actual' if filtro_estado == 'VIGENTE' }}">Vigentes</a>
+  <a href="/certificados?estado=ANULADO" class="{{ 'actual' if filtro_estado == 'ANULADO' }}">Anulados</a>
+  {% if sesion and sesion.rol == 'AUDITOR_EXTERNO' %}
+    <a href="/certificados/exportar">Exportar CSV</a>
+  {% endif %}
+</nav>
+
+<div class="tabla-envoltura">
+<table>
+  <thead>
+    <tr><th>#</th><th>Finca</th><th>Período</th><th>Toneladas</th><th>Estado</th><th>Emitido</th><th></th></tr>
+  </thead>
+  <tbody>
+    {% for c in certificados %}
+      <tr class="{{ '' if c.estado == 'VIGENTE' else 'inactiva' }}">
+        <td>{{ c.id }}</td>
+        <td>{{ c.finca_nombre }}<br><span class="nota">finca {{ c.finca }} · {{ c.zona }} · medición {{ c.medicion }}</span></td>
+        <td>{{ c.periodo_etiqueta }}</td>
+        <td>{{ c.toneladas }}</td>
+        <td><span class="insignia {{ c.estado | lower }}">{{ c.estado | capitalize }}</span></td>
+        <td>{{ c.emitido_en[:10] }}<br><span class="nota">cuenta {{ c.emitido_por }}</span></td>
+        <td><a href="/certificados/{{ c.id }}">Ver</a></td>
+      </tr>
+    {% else %}
+      <tr><td colspan="7" class="vacio">No hay certificados que su rol pueda ver.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+
+{% if sesion and sesion.rol == 'VERIFICADOR' %}
+<h2>Mediciones aprobadas sin certificado</h2>
+<p class="nota">
+  Emitir pide volver a confirmar la contraseña y el código. El servidor
+  revisa C6 dentro de la misma transacción: la medición tiene que estar
+  aprobada, usted no puede ser quien la registró, y el terreno no puede
+  cruzarse con un certificado vigente.
+</p>
+<div class="tabla-envoltura">
+<table>
+  <thead><tr><th>Medición</th><th>Finca</th><th>Período</th><th>Toneladas</th><th>Registró</th><th></th></tr></thead>
+  <tbody>
+    {% for m in por_emitir %}
+      <tr>
+        <td>{{ m.id }}</td>
+        <td>{{ m.finca }}</td>
+        <td>{{ m.periodo_etiqueta }}</td>
+        <td>{{ m.biomasa_toneladas }}</td>
+        <td>cuenta {{ m.autor }}</td>
+        <td class="acciones">
+          {# Comodidad, no control: C6 lo decide el servidor. #}
+          <form method="post" action="/certificados/emitir" class="en-linea">
+            <input type="hidden" name="csrf" value="{{ csrf }}">
+            <input type="hidden" name="medicion" value="{{ m.id }}">
+            <button>Emitir y firmar</button>
+          </form>
+        </td>
+      </tr>
+    {% else %}
+      <tr><td colspan="6" class="vacio">No hay mediciones aprobadas pendientes de certificar.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+
+<p class="nota">¿Tiene un archivo de certificado? <a href="/verificar">Verifíquelo aquí</a>.</p>
+
+</div>
+{% endblock %}

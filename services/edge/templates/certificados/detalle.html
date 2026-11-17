@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block titulo %}Certificado {{ c.id }} · Verdeazul Carbono{% endblock %}
+
+{% block contenido %}
+<div class="certificados">
+
+<h1>Certificado {{ c.id }}</h1>
+
+{% if ok %}<p class="aviso">{{ ok }}</p>{% endif %}
+{% if error %}<p class="error">{{ error }}</p>{% endif %}
+
+<table>
+  <tbody>
+    <tr><th>Estado</th><td><span class="insignia {{ c.estado | lower }}">{{ c.estado | capitalize }}</span>
+      {% if c.anulado_en %}<br><span class="nota">anulado el {{ c.anulado_en[:10] }}: {{ c.motivo_anulacion }}</span>{% endif %}</td></tr>
+    <tr><th>Finca</th><td>{{ c.finca_nombre }} (finca {{ c.finca }}, zona {{ c.zona }})</td></tr>
+    <tr><th>Medición</th><td>{{ c.medicion }} · período {{ c.periodo_etiqueta }}</td></tr>
+    <tr><th>Toneladas</th><td>{{ c.toneladas }}</td></tr>
+    <tr><th>Emitido</th><td>{{ c.emitido_en[:19] | replace('T', ' ') }} UTC, por la cuenta {{ c.emitido_por }}</td></tr>
+    <tr><th>Huella de la llave</th><td><code>{{ c.huella_llave }}</code></td></tr>
+  </tbody>
+</table>
+
+<p>
+  <a href="/certificados/{{ c.id }}/descargar">Descargar el archivo firmado</a>
+  · <a href="/verificar">Verificarlo</a>
+</p>
+<p class="nota">
+  El archivo es lo que circula fuera de Verdeazul. Si alguien le cambia un
+  solo carácter a lo certificado, la verificación falla.
+</p>
+
+{% if sesion and sesion.rol == 'DIRECCION_CERTIFICACION' and c.estado == 'VIGENTE' %}
+<h2>Anular</h2>
+{# Comodidad, no control: An sobre O5 lo decide el servidor. #}
+<form method="post" action="/certificados/{{ c.id }}/anular" class="tarjeta">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <label for="motivo">Motivo (queda en el certificado y en la bitácora)</label>
+  <textarea id="motivo" name="motivo" rows="3" minlength="5" maxlength="500" required></textarea>
+  <button class="secundario">Anular el certificado</button>
+  <p class="nota">Pide volver a confirmar la contraseña. Anular libera el terreno para una emisión nueva.</p>
+</form>
+{% endif %}
+
+<details>
+  <summary>Ver el documento firmado</summary>
+  <pre>{{ c.documento }}</pre>
+</details>
+
+<p><a href="/certificados">Volver a los certificados</a></p>
+</div>
+{% endblock %}
