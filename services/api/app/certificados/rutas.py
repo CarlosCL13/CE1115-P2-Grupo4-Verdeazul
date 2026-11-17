@@ -1,38 +1,171 @@
-"""O5 Certificados de carbono: emitir y verificar. Contrato 04.
+"""O5 Certificados de carbono. Contrato 04.
 
+    GET  /certificados                  los que el sujeto puede ver
+    GET  /certificados/exportar         CSV para el auditor (X.C7)
+    GET  /certificados/{id}             uno, con su documento firmado
     POST /certificados/{medicion}/emitir el verificador emite y firma (Em.C6)
+    POST /certificados/{id}/anular      Direccion de Certificacion (An)
     POST /publico/verificar             SIN SESION: comprueba un archivo (D-09)
 
-Listar, ver, anular y exportar en la rama feature/certificados-resto.
+La matriz sobre O5:
 
-La matriz sobre O5, para Em:
-
-    Verificador                    Em.C6
-    los demas roles                nada
+    Direccion General              L
+    Direccion de Certificacion     L, An
+    Verificador                    L, Em.C6
+    Auditor externo                L.C7, X.C7
+    Dueno de finca                 L.C8
+    Tercero autorizado             L.C9
+    Personal Admin., Tecnico       nada
+    ningun rol                     C, M, E
 
 Nadie modifica un certificado: va firmado y circula fuera del sistema. La
 base lo impone (migracion 012): app_rw solo puede cambiar estado,
-motivo_anulacion y anulado_en, que es lo necesario para anularlo.
+motivo_anulacion y anulado_en, que es lo necesario para anularlo. Corregir un
+certificado es anularlo y emitir otro (minuta B2).
 
 En `emitir`, el {id} de la ruta es el de la MEDICION: el certificado todavia
 no existe. La ruta la fija el contrato 04, que traduce Em siempre a
 POST /recurso/{id}/accion.
 """
 
+import csv
+import io
 import json
 
 import psycopg
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Query, Request
+from fastapi.responses import Response
+from pydantic import BaseModel, Field
 
 from app import bd
-from app.auth.dependencias import SesionReautenticada, autorizar
+from app.auth.dependencias import (SesionCompleta, SesionReautenticada,
+                                   autorizar, consultar)
 from app.bitacora import registrar
+from app.certificacion import consultas as qc
 from app.certificacion.fincas import inexistente
 from app.certificados import consultas as q
 from app.certificados import firma, verificacion
 from app.errores import ErrorAPI
 
 router = APIRouter(tags=["certificados"])
+
+
+class Anulacion(BaseModel):
+    motivo: str = Field(min_length=5, max_length=500)
+
+
+def _uno(cur, certificado_id: int, bloquear: bool = False,
+         con_documento: bool = False) -> dict | None:
+    select = (q.SELECT_CERTIFICADO_CON_DOCUMENTO if con_documento
+              else q.SELECT_CERTIFICADO)
+    cur.execute(select + "WHERE c.id = %s" +
+                (" FOR UPDATE OF c" if bloquear else ""), (certificado_id,))
+    return cur.fetchone()
+
+
+def _atributos_lectura(cur, sesion, fila: dict,
+                       autorizaciones: dict | None = None) -> dict:
+    """Todo lo que L puede necesitar: C7 del sujeto, C8 de la fila y C9."""
+    if autorizaciones is None:
+        autorizaciones = q.autorizaciones_del_tercero(cur, sesion)
+    return {**qc.atributos_sujeto(cur, sesion),
+            **q.atributos_certificado(fila),
+            **autorizaciones.get(fila["finca"], {})}
+
+
+# ---------------------------------------------------------------------------
+# L: listar y ver
+# ---------------------------------------------------------------------------
+
+@router.get("/certificados")
+def listar_certificados(sesion: SesionCompleta,
+                        estado: str | None = Query(
+                            default=None, pattern="^(VIGENTE|ANULADO)$"),
+                        medicion: int | None = Query(default=None, gt=0)
+                        ) -> dict:
+    with bd.transaccion() as cur:
+        propios = qc.atributos_sujeto(cur, sesion)
+        general = consultar(sesion, "L", "O5", propios)
+        # Igual que en O1 y O3: si el motor niega sin nombrar condicion, el
+        # rol no tiene L (403). El auditor tampoco filtra fila por fila: su
+        # condicion (C7) es de el, no de la fila.
+        if not general.permitido and (
+                general.condicion is None or sesion.rol == "AUDITOR_EXTERNO"):
+            autorizar(sesion, "L", "O5", objeto="O5:*", atributos=propios)
+
+        autorizaciones = q.autorizaciones_del_tercero(cur, sesion)
+        filtro, parametros = q.previo_por_rol(sesion, autorizaciones)
+        for columna, valor in (("c.estado::text", estado),
+                               ("c.medicion", medicion)):
+            if valor is not None:
+                filtro += " AND %s = %%s" % columna
+                parametros += (valor,)
+        cur.execute(q.SELECT_CERTIFICADO + "WHERE true" + filtro +
+                    " ORDER BY c.id DESC LIMIT %s",
+                    (*parametros, q.LIMITE_LISTADO))
+        visibles = []
+        for fila in cur.fetchall():
+            if not general.permitido and not consultar(
+                    sesion, "L", "O5", _atributos_lectura(
+                        cur, sesion, fila, autorizaciones)).permitido:
+                continue
+            visibles.append(q.certificado_json(fila))
+        registrar(accion="CERTIFICADOS_LISTADOS", sujeto=sesion.sujeto.id,
+                  objeto="O5:*", resultado="PERMITIDO",
+                  detalle={"resultados": len(visibles)})
+    return {"certificados": visibles}
+
+
+# Antes de /certificados/{id}: si no, "exportar" se tomaria por un id.
+@router.get("/certificados/exportar")
+def exportar_certificados(sesion: SesionCompleta) -> Response:
+    """Todos los certificados, en CSV. Solo el auditor, y solo en su ventana.
+    Mismo formato que las otras exportaciones: una fila por registro."""
+    with bd.transaccion() as cur:
+        autorizar(sesion, "X", "O5", objeto="O5:*",
+                  atributos=qc.atributos_sujeto(cur, sesion))
+        cur.execute(q.SELECT_CERTIFICADO + "ORDER BY c.id")
+        filas = cur.fetchall()
+        registrar(accion="CERTIFICADOS_EXPORTADOS", sujeto=sesion.sujeto.id,
+                  objeto="O5:*", resultado="PERMITIDO",
+                  detalle={"filas": len(filas)})
+
+    salida = io.StringIO()
+    escritor = csv.writer(salida, lineterminator="\n")
+    escritor.writerow(["id", "medicion", "finca", "periodo", "toneladas",
+                       "estado", "emitido_por", "emitido_en", "huella_llave",
+                       "motivo_anulacion", "anulado_en"])
+    for f in filas:
+        escritor.writerow([
+            f["id"], f["medicion"], f["finca"], f["periodo_etiqueta"],
+            f["toneladas"], f["estado"], f["emitido_por"],
+            f["emitido_en"].isoformat(), q.huella_de(f),
+            f["motivo_anulacion"] or "",
+            f["anulado_en"].isoformat() if f["anulado_en"] else ""])
+    return Response(
+        salida.getvalue(), media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition":
+                 'attachment; filename="certificados.csv"'})
+
+
+@router.get("/certificados/{certificado_id}")
+def ver_certificado(certificado_id: int, sesion: SesionCompleta) -> dict:
+    """Un certificado y su documento firmado, que es el archivo que el dueno
+    descarga y que despues se sube a la verificacion publica."""
+    with bd.transaccion() as cur:
+        fila = _uno(cur, certificado_id, con_documento=True)
+        objeto = "O5:%d" % certificado_id
+        if fila is None:
+            inexistente(cur, sesion, "L", "O5", objeto)
+        autorizar(sesion, "L", "O5", objeto=objeto,
+                  atributos=_atributos_lectura(cur, sesion, fila))
+        # Quien vio que certificado. Es lo que la carta pide saber ("si
+        # alguien anduvo viendo informacion que no le correspondia") y lo
+        # que prueba que un tercero solo vio lo que el dueno le autorizo.
+        registrar(accion="CERTIFICADO_CONSULTADO", sujeto=sesion.sujeto.id,
+                  objeto=objeto, resultado="PERMITIDO",
+                  detalle={"rol": sesion.rol})
+    return {**q.certificado_json(fila), "documento": fila["documento"]}
 
 
 # ---------------------------------------------------------------------------
@@ -103,6 +236,42 @@ def emitir_certificado(medicion_id: int, sesion: SesionReautenticada) -> dict:
                            "huella_llave": huella})
     return {"id": nuevo, "estado": "VIGENTE", "huella_llave": huella,
             "documento": texto}
+
+
+# ---------------------------------------------------------------------------
+# An: anular
+# ---------------------------------------------------------------------------
+
+@router.post("/certificados/{certificado_id}/anular")
+def anular_certificado(certificado_id: int, datos: Anulacion,
+                       sesion: SesionReautenticada) -> dict:
+    """Direccion de Certificacion deja sin efecto un certificado vigente.
+
+    Nada se borra (minuta B2, LG-06): cambia el estado, y el documento
+    firmado sigue guardado. Anular libera el terreno para una emision nueva,
+    porque C6 solo compara contra los vigentes; por eso pide
+    reautenticacion, igual que emitir (D-21).
+    """
+    with bd.transaccion() as cur:
+        fila = _uno(cur, certificado_id, bloquear=True)
+        objeto = "O5:%d" % certificado_id
+        if fila is None:
+            inexistente(cur, sesion, "An", "O5", objeto)
+        autorizar(sesion, "An", "O5", objeto=objeto,
+                  atributos=q.atributos_certificado(fila))
+        if fila["estado"] != "VIGENTE":
+            raise ErrorAPI(409, "ya_anulado", "El certificado ya está anulado.")
+
+        cur.execute("UPDATE certificados SET estado = 'ANULADO', "
+                    "motivo_anulacion = %s, anulado_en = now() WHERE id = %s",
+                    (datos.motivo.strip(), certificado_id))
+        registrar(accion="CERTIFICADO_ANULADO", sujeto=sesion.sujeto.id,
+                  objeto=objeto, resultado="PERMITIDO",
+                  detalle={"medicion": str(fila["medicion"]),
+                           "finca": str(fila["finca"]),
+                           "motivo": datos.motivo.strip()})
+        fila = _uno(cur, certificado_id)
+    return q.certificado_json(fila)
 
 
 # ---------------------------------------------------------------------------
