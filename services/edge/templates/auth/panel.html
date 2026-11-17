@@ -41,6 +41,9 @@
   {% if sesion.rol == 'PERSONAL_ADMINISTRATIVO' %}
     <li><a href="/personas/nueva">Registrar los datos de un dueño</a></li>
   {% endif %}
+
+  <li><a href="/consentimientos">Autorizaciones a terceros</a></li>  {# Esta sección solo la ven la Dirección General, el Personal Administrativo y el Dueño de finca, que son justo los roles con permiso sobre O7 #}
+
 </ul>
 {% endif %}
 
