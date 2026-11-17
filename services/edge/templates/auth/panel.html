@@ -79,6 +79,9 @@
 
 <h2>Certificados</h2>
 <ul>
+  {% if sesion.rol in ('DIRECCION_GENERAL', 'DIRECCION_CERTIFICACION', 'VERIFICADOR', 'AUDITOR_EXTERNO', 'DUENO_FINCA', 'TERCERO_AUTORIZADO') %}
+    <li><a href="/certificados">{{ 'Mis certificados' if sesion.rol == 'DUENO_FINCA' else 'Certificados de carbono' }}</a></li>
+  {% endif %}
   <li><a href="/verificar">Verificar un certificado</a></li>
 </ul>
 {% endblock %}

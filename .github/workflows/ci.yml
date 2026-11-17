@@ -151,8 +151,9 @@ jobs:
         run: pytest tests/asignaciones -v -rs
 
       # O5 certificados: emitir y firmar (C6, con el traslape y el candado
-      # dentro de la transaccion), verificar uno valido y uno alterado, y que
-      # la base no deja cambiar lo firmado. test_firma.py no usa la base.
+      # dentro de la transaccion), verificar uno valido y uno alterado, anular,
+      # quien ve que (C7, C8, C9) y que la base no deja cambiar lo firmado.
+      # test_firma.py no usa la base: tambien corre en cualquier maquina.
       - name: Pruebas de certificados
         run: pytest tests/certificados -v -rs  
 

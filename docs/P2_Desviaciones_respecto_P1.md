@@ -29,6 +29,8 @@ El modelo de control de acceso no cambia. Los ocho roles, los once objetos, las 
 | D-17 | Un período se crea abriéndolo, y `/abrir` reabre uno cerrado | Hueco del diseño |
 | D-18 | El técnico solo registra mediciones en su zona | Refuerzo de la matriz |
 | D-19 | El transmisor corre cada media hora, no casi en tiempo real | Límites del plan gratuito de Neon |
+| D-20 | C9 se ata a la finca, y C6 compara el interior de los polígonos | Hueco del diseño |
+| D-21 | Anular un certificado y autorizar a un tercero piden reautenticación | Refuerzo de la matriz |
 
 ## D-01. La plataforma de alojamiento es software propietario
 
@@ -110,6 +112,10 @@ El diseño sostenía el principio de mediación completa: ninguna ruta, trabajo 
 El punto de verificación es público y no pide sesión. No es una excepción al control de acceso porque no consulta la base de datos ni revela nada: recibe un archivo que trae quien verifica, comprueba la firma con la clave pública incrustada en ese mismo archivo y responde si es válido. No hay objeto protegido en juego.
 
 Las medidas que lo acotan son límite de tasa por origen, tamaño máximo del archivo y una respuesta que solo dice si la firma es válida, sin detalles internos.
+
+**Cómo quedó implementado.** Se implementó con las tres medidas prometidas: tamaño máximo de 64 KB (en el borde y otra vez en el backend), límite de 10 verificaciones por minuto por dirección de origen en el borde, y una respuesta que solo dice si es válido, si la llave es la de Verdeazul y las dos huellas. El límite de tasa vive en la memoria de cada instancia del borde: si Cloud Run levanta varias, el límite efectivo se multiplica. Se acepta por el volumen del sistema; en una operación real iría en un almacén compartido. Una verificación válida tampoco dice si el certificado se anuló después, porque la verificación no consulta la base: un anulado conserva su firma. Para saberlo hay que preguntarle a Verdeazul.
+
+**La huella publicada.** La de la llave de producción es `SHA256:203b7265f5b57cbe0aed5ef62cb74a56e2731c5185675e8742203dfbd3df811d`. La página `/verificar` la muestra junto a la huella del archivo, y es la que se compara por fuera del sistema (D-10). Se comprobó en producción el 17 de noviembre: un certificado firmado con una llave generada en otra máquina tiene firma válida y aun así se rechaza, porque su huella es otra.
 
 ## D-10. Firma digital de certificados
 
@@ -202,3 +208,22 @@ Estas no son desviaciones todavía. Hay que resolverlas y moverlas arriba o desc
 **Alcance de HBAC-02.** El reporte semanal de volumen anómalo no es una celda de la matriz, así que no cuenta para la cobertura, pero sí es una política documentada en P1 y en el Informe de políticas. Hay que decidir si se implementa en versión mínima o se declara fuera de alcance.
 
 **El portal de auditores.** La minuta comprometió un portal propio con reportes en PDF. El permiso de exportar sí hay que implementarlo porque es una celda de la matriz. Que sea un portal separado o una sección de la misma aplicación está por decidir.
+
+## D-20. C9 se ata a la finca, y C6 compara el interior de los polígonos
+
+Dos reglas de la matriz, tal como se escribieron en P1, dejaban un hueco al construirlas.
+
+**C9.** La regla dice `autorizacion.tercero = sujeto.id ∧ hoy < autorizacion.vence`. No dice de qué finca es la autorización. Escrita así, un tercero con cualquier autorización vigente vería los certificados de todas las fincas, y los dueños son competencia entre sí: es justo lo que la carta pide evitar y lo que la regla LG-03 prohíbe. Tampoco dice nada de una autorización revocada, que CU-09 exige que deje de servir.
+
+Lo implementado: el motor evalúa C9 como está escrita, pero el backend solo le manda la autorización que es **de la finca del certificado** y **no está revocada** (`services/api/app/certificados/consultas.py`, `autorizaciones_del_tercero`). Si no existe ninguna, no manda nada y C9 no se cumple. La fecha la sigue decidiendo el motor, así que una autorización vencida llega al motor y el motor la niega. La implicación de seguridad es que una parte de la condición vive en una consulta SQL y no en Rego; la cubre la prueba `test_una_autorizacion_de_otra_finca_no_sirve`.
+
+**C6.** «Ningún certificado vigente tiene un polígono que se superponga». Con `ST_Intersects` solo, dos fincas vecinas que comparten un lindero se «intersecan» en el borde, y certificar una impediría para siempre certificar la vecina. Lo que la minuta B4 prohíbe es certificar dos veces el mismo terreno, así que se exige que los interiores se crucen: `ST_Intersects` y no solo `ST_Touches`. Lo cubre `test_dos_fincas_vecinas_si`.
+
+## D-21. Anular un certificado y autorizar a un tercero piden reautenticación
+
+P1 (Tabla 7.1) vuelve a pedir el factor antes de aprobar, emitir, abrir y cerrar períodos y cambiar roles. Se agregan dos acciones:
+
+- **Anular un certificado** (An sobre O5). C6 solo compara contra los vigentes, así que anular libera el terreno para una emisión nueva. Con una sesión robada, anular y volver a emitir es un camino para cambiar un certificado.
+- **Autorizar a un tercero o extender una autorización** (C y M sobre O7). Es entregarle información del dueño a otra persona (Ley 8968, art. 14).
+
+Revocar una autorización no pide reautenticación a propósito: es la acción que protege al dueño y no debe costarle nada. El efecto es un paso más para el dueño y para la Dirección de Certificación en esas acciones; no cambia ninguna celda de la matriz.

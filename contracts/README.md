@@ -40,9 +40,10 @@ original; esta sección dice cómo quedó y qué falta.
 | Bitácora y transmisor | Adriel | O11, y las cuatro tareas: `transmitir`, `vencer`, `cadena` y `volcado` (migración 014, depósito de Cloud Storage) |
 | Enmiendas y asignaciones | Adriel | O4 con C4, C5 y C11; O8 con revocar el mismo día |
 | Dependencias | Adriel | Alerta de Dependabot atendida: CVE-2025-62727 ([docs/Dependabot.md](../docs/Dependabot.md)) |
+| Certificados y consentimientos | Meibel | O5 con C6, firma Ed25519 y verificación pública; O7 con C8 (migración 013, D-20 y D-21) |
 
-Van **46 de los 57 endpoints** (13 de noviembre). Faltan O5 certificados y O7
-consentimientos, que son de Meibel. Cuáles, uno por uno, está en la última
+Van **56 de los 57 endpoints** (17 de noviembre). Falta solo `GET /authz/explicar`,
+que es opcional. Cuáles, uno por uno, está en la última
 columna de [04-endpoints.md](04-endpoints.md). El material del informe está en
 [docs/Informe_P2.md](../docs/Informe_P2.md).
 

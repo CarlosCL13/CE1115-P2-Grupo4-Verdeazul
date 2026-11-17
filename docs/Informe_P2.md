@@ -94,7 +94,7 @@ la bitácora y encadena cada evento con HMAC.
 | **2.3.3 Secretos fuera del código** | Secret Manager, inyectados con `--set-secrets` (`.github/workflows/desplegar.yml`); `.env` en `.gitignore`; despliegue con federación de identidad, sin archivo de credenciales | Job «Buscar credenciales versionadas» (gitleaks sobre todo el historial) en cada pull request. Captura: Secret Manager |
 | **2.3.4 TLS en todo el tráfico** | Cloud Run solo sirve HTTPS en `*.run.app`; Neon con `sslmode=verify-full` (el código rechaza otra cosa, `config.py`); borde → backend por HTTPS | Captura del candado y del certificado en el navegador; `migrar.py` y `config.py` fallan si la cadena no pide `verify-full`. ⏳ Falta la cabecera HSTS (pendientes) |
 | **2.3.5 Validación de entradas** | Consultas parametrizadas en todos los módulos (`%s` de psycopg); los filtros tienen forma cerrada (patrones en `Query`, modelos de Pydantic); los fragmentos de SQL son fijos | Pruebas de 422 con entradas como `X' OR '1'='1` y `1; DROP TABLE eventos` (`tests/bitacora`), y de 422 en los modelos de enmiendas y asignaciones |
-| **2.3.6 Firma digital de certificados** | ⏳ O5 (Meibel): Ed25519 con la llave de Secret Manager (`llave-firma-certificados`), clave pública dentro del documento (D-10) | ⏳ Emitir, verificar y verificar uno alterado que falle |
+| **2.3.6 Firma digital de certificados** | `services/api/app/certificados/firma.py`: Ed25519 con la llave de Secret Manager (`llave-firma-certificados`, leída por `config.LLAVE_FIRMA_CERTIFICADOS`); se firma la forma canónica del contenido con un prefijo de dominio; la clave pública y su huella viajan en el documento (D-10). `verificacion.py` comprueba la firma sin tocar la base y compara la huella con la de Verdeazul (D-09). La base no deja cambiar lo firmado (migraciones 012 y 013). Huella publicada de la llave de producción: `SHA256:203b7265f5b57cbe0aed5ef62cb74a56e2731c5185675e8742203dfbd3df811d` | `tests/certificados/test_firma.py` (sin base: válido, alterado, firmado con otra llave, campos sin firmar, llaves repetidas) y `tests/certificados/test_certificados.py` (de punta a punta). Capturas 4 y 5, y un certificado firmado con otra llave que `/verificar` rechaza con «No lo firmó Verdeazul» |
 
 Controles de P1 que también se implementaron, para la sección o un anexo:
 
@@ -222,15 +222,15 @@ punta contra PostgreSQL.
 | | A, D | VF (C4) | `POST /enmiendas/{id}/aprobar`, `/devolver` | idem |
 | | Cr | DC (C5) | `POST /enmiendas/{id}/cerrar` | idem |
 | | X | AE (C7) | `GET /enmiendas/exportar` | idem |
-| O5 Certificados | L | DG, DC, VF; AE (C7); DF (C8); TA (C9) | ⏳ `GET /certificados`, `/certificados/{id}` | ⏳ |
-| | Em | VF (C6) | ⏳ `POST /certificados/{id}/emitir` | ⏳ |
-| | An | DC | ⏳ `POST /certificados/{id}/anular` | ⏳ |
-| | X | AE (C7) | ⏳ `GET /certificados/exportar` | ⏳ |
+| O5 Certificados | L | DG, DC, VF; AE (C7); DF (C8); TA (C9, atada a la finca, D-20) | `GET /certificados`, `/certificados/{id}` | `tests/certificados/test_certificados.py` |
+| | Em | VF (C6) | `POST /certificados/{medicion}/emitir` | idem |
+| | An | DC | `POST /certificados/{id}/anular` | idem |
+| | X | AE (C7) | `GET /certificados/exportar` | idem |
 | O6 Datos personales | L | DG, PA; DF (C8) | `GET /personas`, `/personas/{id}` | `tests/identidad/test_flujos.py` |
 | | C, M | PA | `POST /personas`, `PATCH /personas/{id}` | idem |
-| O7 Consentimientos | L | DG, PA; DF (C8) | ⏳ `GET /consentimientos`, `/{id}` | ⏳ |
-| | C | PA; DF (C8) | ⏳ `POST /consentimientos` | ⏳ |
-| | M | DF (C8) | ⏳ `PATCH /consentimientos/{id}` | ⏳ |
+| O7 Consentimientos | L | DG, PA; DF (C8) | `GET /consentimientos`, `/{id}` | `tests/consentimientos/test_consentimientos.py` |
+| | C | PA; DF (C8) | `POST /consentimientos` | idem |
+| | M | DF (C8) | `PATCH /consentimientos/{id}` | idem |
 | O8 Asignaciones | L | DG, DC; TC, VF (C1) | `GET /asignaciones`, `/asignaciones/{id}` | `tests/asignaciones/test_asignaciones.py` |
 | | C, M | DC | `POST /asignaciones`, `PATCH /asignaciones/{id}` | idem |
 | O9 Cuentas | L, C, M | DG (L); PA (C10) | `GET /cuentas`, `POST /cuentas`, `PATCH /cuentas/{id}` + solicitudes | `tests/identidad/test_flujos.py` |
@@ -254,8 +254,8 @@ Neon de cada objeto de O4, O8 y O11 con las cuentas de prueba (las capturas de
 | 1 | **Sistema por HTTPS** | La URL pública con el candado y el detalle del certificado | cualquiera |
 | 2 | **Secret Manager** | Consola → Secret Manager: la lista de los ocho secretos (sin abrir valores) | Carlos o Adriel |
 | 3 | **Dependabot activo** | GitHub → Settings → Code security (Dependabot alerts y version updates encendidos) + la pestaña de PR de Dependabot + PR #24 | Adriel |
-| 4 | **Certificado verificado** | ⏳ `/verificar` con un certificado emitido → válido | Meibel |
-| 5 | **Certificado alterado que falla** | ⏳ El mismo archivo con un número cambiado → inválido | Meibel |
+| 4 | **Certificado verificado** | `vf2` emite la medición 1 → `df1` lo descarga desde Certificados → sin sesión, `/verificar` con ese archivo → «Certificado válido» | Meibel |
+| 5 | **Certificado alterado que falla** | El mismo archivo con `"toneladas": "120.500"` cambiado a `"999.500"` → «Certificado alterado» | Meibel |
 | 6 | **Intento fallido de un rol** | Con `pa`, escribir `/bitacora/exportar` → «Acceso denegado», y su `ACCESO_DENEGADO` en la bitácora con el motivo | Adriel |
 | 7 | Bitácora con las acciones | `dg` → Bitácora, filtro por objeto O4 u O8 | Adriel |
 | 8 | Cadena verificada | Bitácora, Sujeto = SISTEMA: `CADENA_VERIFICADA` con 0 rotos | Adriel |
@@ -276,7 +276,7 @@ Neon de cada objeto de O4, O8 y O11 con las cuentas de prueba (las capturas de
 | HTTPS desde internet | La URL pública, desde una red distinta a la del equipo |
 | Cada rol haciendo lo suyo | `tc1` pide una enmienda → `vf2` la aprueba → `dc` la cierra; `dc` asigna una zona |
 | Un rol intentando lo que no le toca | `pa` en `/bitacora/exportar`; `tc1` en `/asignaciones` sin zona |
-| Emitir, verificar y uno alterado | ⏳ O5 |
+| Emitir, verificar y uno alterado | `vf2` emite la medición 1; intenta la 5 y C6 la rechaza por traslape; `df1` descarga; `/verificar` sin sesión → válido; el archivo editado → alterado |
 | La bitácora con esas acciones | Transmitir a mano (o esperar la corrida) y filtrar por objeto |
 | Secretos y Dependabot | Secret Manager y `docs/Dependabot.md` |
 

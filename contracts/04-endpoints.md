@@ -67,10 +67,10 @@ prueba que el despliegue existe. Ya está escrito.
 
 | Endpoint | Para qué sirve | Necesita | Cubre | Estado |
 |---|---|---|---|---|
-| `GET /consentimientos` | La Dirección General y el personal administrativo ven qué autorizaciones existen | tabla `consentimientos` | — | **Pendiente** |
-| `GET /consentimientos/{id}` | El dueño de finca consulta lo que él mismo autorizó | C8 en el motor | — | **Pendiente** |
-| `POST /consentimientos` | El dueño autoriza a un tercero a ver sus certificados; el administrativo lo registra por él | C8, evento de bitácora | Correspondencia P1 7 | **Pendiente** |
-| `PATCH /consentimientos/{id}` | El dueño revoca o cambia el alcance de lo que autorizó | C8, evento de bitácora | — | **Pendiente** |
+| `GET /consentimientos` | La Dirección General y el personal administrativo ven qué autorizaciones existen | tabla `consentimientos` | — | Hecho, con «solo vigentes» |
+| `GET /consentimientos/{id}` | El dueño de finca consulta lo que él mismo autorizó | C8 en el motor | — | Hecho |
+| `POST /consentimientos` | El dueño autoriza a un tercero a ver sus certificados; el administrativo lo registra por él | C8, evento de bitácora | Correspondencia P1 7 | Hecho, con reautenticación (D-21). `otorgado_por` es siempre el dueño |
+| `PATCH /consentimientos/{id}` | El dueño revoca o cambia el alcance de lo que autorizó | C8, evento de bitácora | — | Hecho. `{"revocar": true}` sin reautenticación; extender la pide |
 
 Este objeto es el que hace que O5 `L·C9` funcione: el tercero autorizado puede
 ver un certificado **porque existe un consentimiento vigente aquí**. Sin O7, la
@@ -292,12 +292,12 @@ registre y apruebe su propia medición. Es la casilla que hay que saber defender
 
 | Endpoint | Para qué sirve | Necesita | Cubre | Estado |
 |---|---|---|---|---|
-| `GET /certificados` | Ver los certificados emitidos | tabla `certificados` | — | **Pendiente** |
-| `GET /certificados/{id}` | El dueño ve los suyos; el tercero ve los que le autorizaron | C8, **C9** (lee O7) | — | **Pendiente** |
-| `POST /certificados/{id}/emitir` | El verificador emite y **firma** el certificado | **C6**: `ST_Intersects` más `pg_advisory_xact_lock`. Clave privada en Secret Manager. Reautenticación | **Certificados 15, 2.3.6** | **Pendiente** |
-| `POST /certificados/{id}/anular` | La Dirección de Certificación anula uno emitido | bitácora | — | **Pendiente** |
-| `GET /certificados/exportar` | El auditor se lleva los certificados de su alcance | C7 | Informe 10 | **Pendiente** |
-| `POST /publico/verificar` | **Sin sesión.** Cualquiera sube el archivo del certificado y se comprueba la firma con la clave pública que viaja en él, comparando su huella con la publicada de Verdeazul (D-10) | nada: no toca la base (D-09). Límite de tasa y tamaño máximo del archivo | **Certificados 15** — «que un tercero pueda confiar sin acceso al sistema» | **Pendiente** |
+| `GET /certificados` | Ver los certificados emitidos | tabla `certificados` | — | Hecho, con filtro por estado |
+| `GET /certificados/{id}` | El dueño ve los suyos; el tercero ve los que le autorizaron | C8, **C9** (lee O7) | — | Hecho. Devuelve el documento firmado. C9 solo con una autorización de esa finca y sin revocar (D-20) |
+| `POST /certificados/{id}/emitir` | El verificador emite y **firma** el certificado | **C6**: `ST_Intersects` más `pg_advisory_xact_lock`. Clave privada en Secret Manager. Reautenticación | **Certificados 15, 2.3.6** | Hecho. El `{id}` es el de la **medición**. Documento guardado tal cual se firmó (migración 013) |
+| `POST /certificados/{id}/anular` | La Dirección de Certificación anula uno emitido | bitácora | — | Hecho, con reautenticación (D-21) |
+| `GET /certificados/exportar` | El auditor se lleva los certificados de su alcance | C7 | Informe 10 | Hecho |
+| `POST /publico/verificar` | **Sin sesión.** Cualquiera sube el archivo del certificado y se comprueba la firma con la clave pública que viaja en él, comparando su huella con la publicada de Verdeazul (D-10) | nada: no toca la base (D-09). Límite de tasa y tamaño máximo del archivo | **Certificados 15** — «que un tercero pueda confiar sin acceso al sistema» | Hecho. 64 KB; 10 por minuto por origen, en el borde |
 
 Estos dos últimos valen quince puntos entre los dos. `emitir` es además el más
 complicado del proyecto: C6 exige revalidar el traslape de polígonos dentro de la
