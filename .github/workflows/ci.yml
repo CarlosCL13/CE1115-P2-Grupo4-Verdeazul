@@ -150,6 +150,12 @@ jobs:
       - name: Pruebas de asignaciones
         run: pytest tests/asignaciones -v -rs
 
+      # O5 certificados: emitir y firmar (C6, con el traslape y el candado
+      # dentro de la transaccion), verificar uno valido y uno alterado, y que
+      # la base no deja cambiar lo firmado. test_firma.py no usa la base.
+      - name: Pruebas de certificados
+        run: pytest tests/certificados -v -rs  
+
       # O11 lee de una segunda base igual a verdeazul-bitacora, en el mismo
       # contenedor, con log_reader como en Neon. Tambien comprueba que
       # log_reader no puede insertar, cambiar ni borrar (frontera F6).

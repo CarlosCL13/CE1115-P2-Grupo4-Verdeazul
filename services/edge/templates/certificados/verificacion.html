@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block titulo %}Verificación · Verdeazul Carbono{% endblock %}
+
+{% block contenido %}
+<div class="certificados">
+
+<h1>Resultado de la verificación</h1>
+
+{% if error %}
+  <p class="error">{{ error }}</p>
+
+{% elif resultado.valido %}
+  <p class="aviso"><strong>Certificado válido.</strong>
+    {% if nombre %}El archivo «{{ nombre }}»{% else %}El archivo{% endif %}
+    no fue modificado desde que se firmó, y lo firmó Verdeazul Carbono.</p>
+  <table>
+    <tbody>
+      <tr><th>Certificado</th><td>{{ resultado.contenido.certificado }}</td></tr>
+      <tr><th>Finca</th><td>{{ resultado.contenido.finca_nombre }} (zona {{ resultado.contenido.zona }})</td></tr>
+      <tr><th>Período</th><td>{{ resultado.contenido.periodo }}</td></tr>
+      <tr><th>Toneladas</th><td>{{ resultado.contenido.toneladas }}</td></tr>
+      <tr><th>Emitido</th><td>{{ resultado.contenido.emitido_en }}</td></tr>
+    </tbody>
+  </table>
+  <p class="nota">
+    La firma prueba que el contenido está intacto. No dice si el certificado
+    se anuló después: un certificado anulado conserva su firma.
+  </p>
+
+{% elif resultado.motivo == 'firma_invalida' %}
+  <p class="error"><strong>Certificado alterado.</strong>
+    La firma no corresponde al contenido: alguien lo modificó después de
+    firmado. No lo acepte.</p>
+
+{% elif resultado.motivo == 'llave_desconocida' %}
+  <p class="error"><strong>No lo firmó Verdeazul.</strong>
+    El contenido está intacto, pero la llave que lo firmó no es la de
+    Verdeazul Carbono. Alguien pudo haber generado sus propias llaves para
+    firmar un certificado falso.</p>
+
+{% else %}
+  <p class="error"><strong>No es un certificado de Verdeazul.</strong>
+    El archivo no tiene la forma de un certificado firmado.</p>
+{% endif %}
+
+{% if resultado and resultado.huella_verdeazul %}
+<table>
+  <tbody>
+    <tr><th>Huella de la llave que firmó</th><td><code>{{ resultado.huella_llave or '—' }}</code></td></tr>
+    <tr><th>Huella publicada de Verdeazul</th><td><code>{{ resultado.huella_verdeazul }}</code></td></tr>
+  </tbody>
+</table>
+<p class="nota">
+  Si verifica con sus propias herramientas, compare la huella del archivo
+  con la que Verdeazul publica por un canal aparte (D-10).
+</p>
+{% endif %}
+
+<h2>Verificar otro archivo</h2>
+<form method="post" action="/verificar" enctype="multipart/form-data">
+  <label for="archivo">Archivo del certificado</label>
+  <input type="file" id="archivo" name="archivo" accept=".json" required>
+  <button type="submit">Verificar</button>
+</form>
+
+</div>
+{% endblock %}

@@ -265,3 +265,31 @@ main:has(.bitacora) { max-width: 78rem; }
   .bitacora .bit-cabecera { flex-direction: column; }
   .bitacora form.filtros { grid-template-columns: 1fr; }
 }
+
+/* Certificados (O5). */
+.certificados .aviso {
+  padding: 0.5rem 0.8rem; border-left: 3px solid var(--verde);
+  background: #eef6f1; font-size: 0.9rem;
+}
+.certificados .pestanas { display: flex; flex-wrap: wrap; gap: 0.25rem; border-bottom: 1px solid var(--borde); margin: 1rem 0 0; }
+.certificados .pestanas a {
+  padding: 0.4rem 0.8rem; color: var(--apagado); text-decoration: none;
+  border-bottom: 3px solid transparent; margin-bottom: -1px;
+}
+.certificados .pestanas a.actual { color: var(--verde); border-bottom-color: var(--verde); font-weight: 600; }
+.certificados .tabla-envoltura { overflow-x: auto; }
+.certificados table { font-size: 0.9rem; }
+.certificados td { vertical-align: top; }
+.certificados tr.inactiva td { color: var(--apagado); }
+.certificados td.acciones { white-space: normal; }
+.certificados .vacio { text-align: center; padding: 2rem; color: var(--apagado); }
+.certificados .insignia { display: inline-block; padding: 0.05rem 0.5rem; border-radius: 999px; font-size: 0.78rem; font-weight: 600; }
+.certificados .insignia.vigente { background: #eef6f1; color: var(--verde); }
+.certificados .insignia.anulado { background: #fbeaea; color: var(--rojo); }
+.certificados button.secundario { background: #fff; color: var(--rojo); border: 1px solid var(--rojo); }
+.certificados form.tarjeta {
+  max-width: 34rem; padding: 1rem; border: 1px solid var(--borde);
+  border-radius: 6px; background: #fff;
+}
+.certificados code { font-size: 0.8rem; word-break: break-all; }
+.certificados details pre { white-space: pre-wrap; word-break: break-all; padding: 0.75rem; background: #fff; border: 1px solid var(--borde); }
