@@ -182,6 +182,35 @@ pre { margin: 0; font-size: 0.85rem; }
   border-radius: 6px; background: #fff;
 }
 
+/* Autorizaciones a terceros (O7). La misma forma que asignaciones. */
+.consentimientos .aviso {
+  padding: 0.5rem 0.8rem; border-left: 3px solid var(--verde);
+  background: #eef6f1; font-size: 0.9rem;
+}
+.consentimientos .pestanas { display: flex; gap: 0.25rem; border-bottom: 1px solid var(--borde); margin: 1rem 0 0; }
+.consentimientos .pestanas a {
+  padding: 0.4rem 0.8rem; color: var(--apagado); text-decoration: none;
+  border-bottom: 3px solid transparent; margin-bottom: -1px;
+}
+.consentimientos .pestanas a.actual { color: var(--verde); border-bottom-color: var(--verde); font-weight: 600; }
+.consentimientos .tabla-envoltura { overflow-x: auto; }
+.consentimientos table { font-size: 0.9rem; }
+.consentimientos td { vertical-align: top; }
+.consentimientos tr.inactiva td { color: var(--apagado); }
+.consentimientos td.acciones { white-space: normal; }
+.consentimientos td.acciones form + form { margin-top: 0.3rem; }
+.consentimientos td.acciones input[type=date] { width: 9.5rem; }
+.consentimientos .vacio { text-align: center; padding: 2rem; color: var(--apagado); }
+.consentimientos .insignia { display: inline-block; padding: 0.05rem 0.5rem; border-radius: 999px; font-size: 0.78rem; font-weight: 600; }
+.consentimientos .insignia.vigente { background: #eef6f1; color: var(--verde); }
+.consentimientos .insignia.vencida { background: #fff4d6; color: #7a5a00; }
+.consentimientos .insignia.revocada { background: #fbeaea; color: var(--rojo); }
+.consentimientos button.secundario { background: #fff; color: var(--rojo); border: 1px solid var(--rojo); }
+.consentimientos form.tarjeta {
+  max-width: 34rem; padding: 1rem; border: 1px solid var(--borde);
+  border-radius: 6px; background: #fff;
+}
+
 /* Bitacora (O11). Todo bajo .bitacora para no tocar las demas paginas. */
 main:has(.bitacora) { max-width: 78rem; }
 .bitacora { --suave: #eef6f1; --rojo-suave: #fbeaea; }

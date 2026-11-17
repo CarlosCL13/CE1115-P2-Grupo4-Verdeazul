@@ -1,15 +1,16 @@
-"""Concesiones: O7 consentimientos (Meibel) y O8 asignaciones (Adriel).
+"""Concesiones: O7 consentimientos y O8 asignaciones 
 
-Un archivo por objeto, para que dos personas trabajen aqui sin pisarse. Cada
-uno expone su router y este paquete los junta en uno solo, que es el que
-main.py registra. O7 agrega aqui su linea cuando exista.
+Este paquete junta O7 y O8 en uno solo, que es el que
+main.py registra. 
+
 """
 
 from fastapi import APIRouter
 
-from app.concesiones import asignaciones
+from app.concesiones import asignaciones, consentimientos
 
 router = APIRouter()
 router.include_router(asignaciones.router)
+router.include_router(consentimientos.router)
 
 __all__ = ["router"]

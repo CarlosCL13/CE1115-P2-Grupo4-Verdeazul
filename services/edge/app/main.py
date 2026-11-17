@@ -133,6 +133,7 @@ from app.identidad import router as router_identidad  # noqa: E402
 from app.certificacion import router as router_certificacion  # noqa: E402
 from app.bitacora import router as router_bitacora  # noqa: E402
 from app.enmiendas import router as router_enmiendas  # noqa: E402
+from app.consentimientos import router as router_consentimientos  # noqa: E402
 from app.asignaciones import router as router_asignaciones  # noqa: E402
 from app.certificados import router as router_certificados  # noqa: E402
 
@@ -140,6 +141,7 @@ app.include_router(router_identidad)
 app.include_router(router_certificacion)
 app.include_router(router_bitacora)
 app.include_router(router_enmiendas)
+app.include_router(router_consentimientos)
 app.include_router(router_asignaciones)
 app.include_router(router_certificados)
 

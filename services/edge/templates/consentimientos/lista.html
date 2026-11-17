@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block titulo %}Autorizaciones a terceros · Verdeazul Carbono{% endblock %}
+
+{% block contenido %}
+<div class="consentimientos">
+
+<h1>Autorizaciones a terceros</h1>
+<p class="nota">
+  Un tercero solo ve los certificados de una finca si su dueño lo autorizó
+  aquí (Ley 8968, LG-03). Toda autorización tiene fecha de fin y deja de
+  servir sola el día que vence. El dueño la puede revocar cuando quiera: el
+  tercero pierde el acceso en su siguiente clic.
+</p>
+
+{% if ok %}<p class="aviso">{{ ok }}</p>{% endif %}
+{% if error %}<p class="error">{{ error }}</p>{% endif %}
+
+<nav class="pestanas" aria-label="Qué autorizaciones mostrar">
+  <a href="/consentimientos" class="{{ 'actual' if not solo_vigentes }}">Todas</a>
+  <a href="/consentimientos?vigentes=1" class="{{ 'actual' if solo_vigentes }}">Solo vigentes</a>
+</nav>
+
+{% set es_dueno = sesion and sesion.rol == 'DUENO_FINCA' %}
+<div class="tabla-envoltura">
+<table>
+  <thead>
+    <tr><th>#</th><th>Finca</th><th>Tercero</th><th>Vence</th><th>Estado</th>
+        {% if es_dueno %}<th>Cambiar</th>{% endif %}</tr>
+  </thead>
+  <tbody>
+    {% for k in consentimientos %}
+      <tr class="{{ '' if k.vigente else 'inactiva' }}">
+        <td>{{ k.id }}</td>
+        <td>{{ k.finca_nombre }}<br><span class="nota">finca {{ k.finca }}</span></td>
+        <td>{{ k.tercero_usuario }}</td>
+        <td>{{ k.vence }}</td>
+        <td>
+          {% if k.revocado_en %}
+            <span class="insignia revocada">Revocada</span><br><span class="nota">{{ k.revocado_en[:10] }}</span>
+          {% elif k.vigente %}
+            <span class="insignia vigente">Vigente</span>
+          {% else %}
+            <span class="insignia vencida">Vencida</span>
+          {% endif %}
+        </td>
+        {% if es_dueno %}
+        <td class="acciones">
+          {# Comodidad, no control: M sobre O7 (C8) lo decide el servidor. #}
+          {% if not k.revocado_en %}
+            <form method="post" action="/consentimientos/{{ k.id }}/extender" class="en-linea">
+              <input type="hidden" name="csrf" value="{{ csrf }}">
+              <input type="date" name="vence" value="{{ k.vence }}" required aria-label="Nueva fecha de fin">
+              <button>Extender</button>
+            </form>
+            <form method="post" action="/consentimientos/{{ k.id }}/revocar" class="en-linea">
+              <input type="hidden" name="csrf" value="{{ csrf }}">
+              <button class="secundario">Revocar</button>
+            </form>
+          {% endif %}
+        </td>
+        {% endif %}
+      </tr>
+    {% else %}
+      <tr><td colspan="6" class="vacio">No hay autorizaciones que su rol pueda ver.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+
+{% if opciones %}
+<h2>Autorizar a un tercero</h2>
+<form method="post" action="/consentimientos" class="tarjeta">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+
+  <label for="finca">Finca</label>
+  <select id="finca" name="finca" required>
+    <option value="" disabled selected>Elija una finca…</option>
+    {% for f in opciones.fincas %}<option value="{{ f.id }}">{{ f.id }} · {{ f.nombre }}</option>{% endfor %}
+  </select>
+
+  <label for="tercero">Tercero</label>
+  {# Sin opcion elegida de antemano: entregar informacion a otra persona
+     tiene que ser una decision explicita. #}
+  <select id="tercero" name="tercero" required>
+    <option value="" disabled selected>Elija un tercero…</option>
+    {% for t in opciones.terceros %}<option value="{{ t.id }}">{{ t.usuario }}</option>{% endfor %}
+  </select>
+
+  <label for="vence">Vence (obligatorio, máximo tres años)</label>
+  <input type="date" id="vence" name="vence" required>
+
+  <button type="submit">Autorizar</button>
+  <p class="nota">Pide volver a confirmar la contraseña: es entregar información de la finca a otra persona.</p>
+</form>
+{% endif %}
+
+</div>
+{% endblock %}
