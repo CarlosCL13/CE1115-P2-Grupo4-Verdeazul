@@ -185,7 +185,7 @@ Media página basta: lo que se evalúa es trazar la línea.
 
 ## 5. Desviaciones respecto al diseño
 
-Están completas en `docs/P2_Desviaciones_respecto_P1.md`, D-01 a D-19, cada una
+Están completas en `docs/P2_Desviaciones_respecto_P1.md`, D-01 a D-22, cada una
 con qué cambió, por qué y su implicación de seguridad. En el informe va la
 tabla resumen de ese archivo y un párrafo de las tres con más peso:
 
