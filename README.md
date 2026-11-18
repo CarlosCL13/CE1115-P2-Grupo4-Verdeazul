@@ -20,7 +20,7 @@ Desplegado en **https://verdeazul-edge-igwgmkeipa-uk.a.run.app**
 | Pruebas de integración | Identidad, certificación, enmiendas, asignaciones y bitácora, en cada pull request contra un PostgreSQL desechable con el mismo esquema |
 | Dependabot | Configurado para los cuatro componentes. Alerta atendida: CVE-2025-62727 en Starlette ([docs/Dependabot.md](docs/Dependabot.md)) |
 | Autenticación | Completa: Argon2id, sesión en la base, segundo factor TOTP, bloqueo RC-01, reautenticación |
-| Endpoints de la matriz | 56 de 57: todos los de la matriz, de O1 a O11. Falta solo `GET /authz/explicar`, que es opcional |
+| Endpoints de la matriz | Los 56, de O1 a O11 |
 | Firma de certificados | Completa: Ed25519 con la llave en Secret Manager, verificación pública a partir del archivo (D-09) y huella de la llave publicada (D-10) |
 | Bitácora | Completa: bandeja de salida, transmisor cada 30 minutos con cadena HMAC (Cloud Scheduler), comprobación de la cadena (`cadena`), revocación de lo vencido (`vencer`) y copia semanal a Cloud Storage con retención de diez años (`volcado`) |
 | Informe | Material completo en [docs/Informe_P2.md](docs/Informe_P2.md) |
@@ -191,7 +191,8 @@ Cada etiqueta es el commit del que salió la imagen, así que `git show <etiquet
 
 | Etiqueta | Imágenes | Fecha | Qué trajo |
 |---|---|---|---|
-| `cdd6037` | api, policies, edge, transmisor | 2026-11-17 | PR #36: O5 completo, listar, ver, anular y exportar certificados. **Es la que corre hoy** |
+| `b6078f7` | api, policies, edge, transmisor | 2026-11-18 | PR #37: un solo período de medición abierto a la vez (D-22). **Es la que corre hoy** |
+| `cdd6037` | api, policies, edge, transmisor | 2026-11-17 | PR #36: O5 completo, listar, ver, anular y exportar certificados |
 | `73c0c1c` | api, policies, edge, transmisor | 2026-11-17 | PR #35: O7 consentimientos |
 | `3764ccd` | api, policies, edge, transmisor | 2026-11-17 | PR #28: firma Ed25519, emitir con C6 y verificación pública |
 | `cae1933` | api, policies, edge, transmisor | 2026-11-13 | PR #26: tarea `volcado` |

@@ -42,19 +42,16 @@ original; esta sección dice cómo quedó y qué falta.
 | Dependencias | Adriel | Alerta de Dependabot atendida: CVE-2025-62727 ([docs/Dependabot.md](../docs/Dependabot.md)) |
 | Certificados y consentimientos | Meibel | O5 con C6, firma Ed25519 y verificación pública; O7 con C8 (migración 013, D-20 y D-21) |
 
-Van **56 de los 57 endpoints** (17 de noviembre). Falta solo `GET /authz/explicar`,
-que es opcional. Cuáles, uno por uno, está en la última
+Están **los 56 endpoints** de la matriz (17 de noviembre). Cuáles, uno por uno, está en la última
 columna de [04-endpoints.md](04-endpoints.md). El material del informe está en
 [docs/Informe_P2.md](../docs/Informe_P2.md).
 
 ### Lo que falta
 
-Lo grande ya está. Queda esto:
-
-| # | Qué | Quién | Por qué |
-|---|---|---|---|
-| 1 | Armar el informe final, de 6 a 10 páginas, a partir de [docs/Informe_P2.md](../docs/Informe_P2.md), con las 15 capturas de su sección 7 | Por decidir | Es el entregable 3 y vale 10 puntos. Hoy es material, no el documento |
-| 2 | `GET /authz/explicar` | Opcional | Muestra en vivo el motivo de una decisión del motor |
+Lo grande ya está. Queda armar el informe final, de 6 a 10 páginas, a partir
+de [docs/Informe_P2.md](../docs/Informe_P2.md), con las 15 capturas de su
+sección 7. Es el entregable 3 y vale 10 puntos; hoy es material, no el
+documento.
 
 Los pull request abiertos de Dependabot no se mergean antes de entregar: dos
 suben de versión mayor las acciones con las que se despliega.

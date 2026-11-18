@@ -113,7 +113,7 @@ LLAVE_BUSQUEDA_CEDULA=lo-que-salio
 .venv/Scripts/python.exe db/migrar.py estado
 ```
 
-`estado` lista qué migraciones están aplicadas y cuáles faltan. Si las once
+`estado` lista qué migraciones están aplicadas y cuáles faltan. Si las catorce
 aparecen con fecha, ya está.
 
 ### 6. Credenciales de prueba

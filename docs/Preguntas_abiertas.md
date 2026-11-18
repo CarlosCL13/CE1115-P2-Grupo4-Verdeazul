@@ -1,5 +1,12 @@
 # Preguntas abiertas y decisiones pendientes
 
+> **Documento de trabajo de octubre, cerrado.** Lo que se preguntaba aquí ya se
+> resolvió. Las decisiones sobre el esquema están en el
+> [contrato 01](../contracts/01-esquema.md), las de autorización en el
+> [contrato 02](../contracts/02-autorizacion.md), y todo lo que cambió respecto
+> a la Parte 1 en las [desviaciones](P2_Desviaciones_respecto_P1.md). Se deja
+> como registro de cómo se llegó a esas decisiones.
+
 Estado al 26 de octubre de 2026. Nada de esto bloquea el primer commit; todo
 esto sí bloquea algo más adelante. Revisar contra la retroalimentación del
 profesor antes de tomar las decisiones marcadas como del grupo.

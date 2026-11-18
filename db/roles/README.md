@@ -13,7 +13,7 @@ adelante el esquema lo toca `app_migrate` y la aplicación corre como `app_rw`.
 |---|---|---|
 | `app_migrate` | crear y alterar tablas | solo las migraciones |
 | `app_rw` | SELECT, INSERT, UPDATE. Sin DELETE, sin DDL | el backend en ejecución |
-| `outbox_rw` | leer y marcar la bandeja de salida | el transmisor |
+| `outbox_rw` | leer y marcar la bandeja de salida; con la 014, revocar asignaciones y consentimientos vencidos y anotar ese evento | el transmisor |
 
 Los dos roles de la bitácora, `log_writer` y `log_reader`, viven en el otro
 proyecto y se crean en [`../bitacora/`](../bitacora/).
