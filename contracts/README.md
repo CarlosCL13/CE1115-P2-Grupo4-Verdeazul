@@ -24,7 +24,7 @@ Un contrato se cambia por pull request, nunca de palabra. Quien lo cambie avisa
 en el chat del grupo, porque la gente que ya escribió código contra él se entera
 cuando le falla algo, no cuando el archivo cambia.
 
-## Dónde estamos (12 de noviembre)
+## Dónde estamos (17 de noviembre)
 
 La entrega es el 19 de noviembre. El plan de las secciones de abajo es el
 original; esta sección dice cómo quedó y qué falta.
@@ -49,53 +49,28 @@ columna de [04-endpoints.md](04-endpoints.md). El material del informe está en
 
 ### Lo que falta
 
-Todavía no tiene dueño: Meibel y Adriel se lo reparten. Va en orden de
-prioridad. Lo de arriba se muestra en la presentación o vale más puntos; lo de
-abajo son celdas de la matriz, que descuentan de a poco.
+Lo grande ya está. Queda esto:
 
-| # | Qué | Endpoints | Por qué va ahí | Necesita antes |
-|---|---|---|---|---|
-| 1 | Emitir y verificar certificados (O5) | `POST /certificados/{id}/emitir`, `POST /publico/verificar` | Son los 15 puntos de certificados y §6.4 de la presentación: emitir, verificar, y que un certificado alterado falle | Lista: `config.LLAVE_FIRMA_CERTIFICADOS` |
-| 2 | Transmisor: `transmitir` | `POST /tareas/transmitir` | Los eventos ya se registran, pero se quedan en la bandeja de salida y la bitácora está vacía. §6.5 pide mostrarla | Listo: ver [services/transmisor/README.md](../services/transmisor/README.md) |
-| 3 | O7 consentimientos | los 4 | Sin esto el tercero autorizado no ve ningún certificado (C9) | — |
-| 3 | O11 bitácora | `GET /bitacora`, `GET /bitacora/exportar` | Es donde se ven los eventos | `transmitir` |
-| 4 | O4 enmiendas | los 7 | Siete operaciones de la matriz, con C4, C5 y C11 | — (O3 ya existe) |
-| 5 | El resto de O5 | listar, ver, anular, exportar | Celdas de la matriz | Emitir |
-| 6 | O8 asignaciones | los 4 | Celdas de la matriz | — |
-| 7 | Transmisor: `vencer` y `cadena` | 2 tareas | «Revocar el mismo día» de §4, y detectar si alguien alteró la bitácora | `transmitir` |
-| — | Transmisor: `volcado` | 1 tarea | Es el respaldo con retención que D-03 y D-07 prometen como compensación (BI-03 y BI-04 de P1). Si no da el tiempo se puede recortar, pero entonces hay que corregir esas dos desviaciones, que hoy lo dan por hecho | — |
-| — | `GET /authz/explicar` | 1 | Opcional, para la presentación | — |
+| # | Qué | Quién | Por qué |
+|---|---|---|---|
+| 1 | Armar el informe final, de 6 a 10 páginas, a partir de [docs/Informe_P2.md](../docs/Informe_P2.md), con las 15 capturas de su sección 7 | Por decidir | Es el entregable 3 y vale 10 puntos. Hoy es material, no el documento |
+| 2 | D-07 dice que el volcado va a un depósito «con retención bloqueada». La retención de diez años está configurada, pero no bloqueada | Carlos | Bloquearla es irreversible por diez años. La alternativa es corregir el texto de D-07 |
+| 3 | `GET /authz/explicar` | Opcional | Muestra en vivo el motivo de una decisión del motor |
 
-Si sirve como punto de partida, una forma pareja de partirlo en dos es por
-tema: **certificados** (O5 completo, O7 y O8) y **bitácora y enmiendas** (el
-transmisor, O11 y O4). Así cada dependencia queda en manos de la misma persona:
-O5 necesita O7, y O11 necesita el transmisor.
+Los pull request abiertos de Dependabot no se mergean antes de entregar: dos
+suben de versión mayor las acciones con las que se despliega.
 
-Cuando lo decidan, díganlo en el chat del grupo, para que nadie arranque lo
-mismo dos veces.
+### La plataforma
 
-### Lo que ya dejó listo Carlos
+Listo y funcionando al 17 de noviembre:
 
-- **Para certificados:** la llave privada de firma en Secret Manager, que el
-  backend lee como `config.LLAVE_FIRMA_CERTIFICADOS`. En local sirve cualquier
-  llave de prueba (ver `.env.example`). La base no deja cambiar lo firmado de
-  un certificado, solo lo necesario para anularlo (migración 012). La
-  verificación pública recibe el archivo y no consulta la base (D-09).
-- **Para la bitácora:** el transmisor con su despliegue, sus conexiones, sus
-  permisos y la columna donde lleva la cuenta de la cadena. Cómo debería
-  funcionar `transmitir` está en
-  [services/transmisor/README.md](../services/transmisor/README.md).
-
-### Lo que sigue haciendo Carlos
-
-- Activa el Scheduler cuando `transmitir` funcione. Corre cada 30 minutos, no
-  más seguido: cada corrida despierta a Neon, y el plan gratuito tiene horas
-  de cómputo contadas (§3.1). Es una desviación de P1, registrada como D-19.
-- Le da al transmisor `log_reader` cuando se escriba `cadena`, y el permiso de
-  revocar cuando se escriba `vencer`.
-- Aplica las migraciones nuevas, porque `app_migrate` solo lo tiene él. Quien
-  necesite una tabla o una columna escribe el archivo en `db/migrations/`
-  dentro de su PR y le avisa.
+- La llave de firma de los certificados en Secret Manager, que el backend lee.
+- El transmisor desplegado, con dos trabajos de Cloud Scheduler activos:
+  `transmitir-bitacora` cada 30 minutos (D-19) y `volcado-bitacora` los lunes.
+- Las migraciones hasta la 014 aplicadas. `app_migrate` solo lo tiene Carlos:
+  quien necesite una migración la escribe en su PR y le avisa.
+- La cabecera HSTS en el borde, y el contenedor de OPA sin root escrito en su
+  Dockerfile (§3.2).
 
 ### Cómo arrancar
 
@@ -165,11 +140,20 @@ mismo dos veces.
 - Datos de prueba: la enmienda 1 está REVISADA, la pidió `tc1` y la revisó
   `vf1`. Para cerrarla hace falta una tercera persona.
 
-### Revisión
+### El día de la presentación (19 de noviembre)
 
-**Sábado 15 de noviembre.** Para ese día, la emisión con firma en una rama, y
-`transmitir` funcionando en local. Lo que no haya arrancado se reasigna ese
-mismo día, porque después ya no hay margen.
+- **Nadie mergea a `develop` ese día.** Cada merge despliega, y si el sistema
+  no abre en la presentación se pierden los 16 puntos de despliegue (§7.1).
+- **Probar el sitio antes desde una red que no sea la de ustedes** (§7.1).
+- **Un perfil de navegador por rol, con la sesión ya iniciada.** Un navegador
+  guarda una sola sesión por sitio: si se entra con otra cuenta en la misma
+  ventana, la anterior se reemplaza.
+- **La bitácora se actualiza cada media hora,** y solo con lo hecho hace más de
+  dos minutos. Para mostrar algo recién hecho, esperar la próxima corrida o
+  lanzarla a mano:
+  `gcloud scheduler jobs run transmitir-bitacora --project=verdeazul-g4 --location=us-east4`
+- **Las credenciales de prueba al profesor por un canal aparte,** con las
+  líneas `otpauth://` de las cuentas con segundo factor (informe, sección 0).
 
 ## Cómo está dividido el trabajo
 

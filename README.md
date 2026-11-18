@@ -20,9 +20,9 @@ Desplegado en **https://verdeazul-edge-igwgmkeipa-uk.a.run.app**
 | Pruebas de integración | Identidad, certificación, enmiendas, asignaciones y bitácora, en cada pull request contra un PostgreSQL desechable con el mismo esquema |
 | Dependabot | Configurado para los cuatro componentes. Alerta atendida: CVE-2025-62727 en Starlette ([docs/Dependabot.md](docs/Dependabot.md)) |
 | Autenticación | Completa: Argon2id, sesión en la base, segundo factor TOTP, bloqueo RC-01, reautenticación |
-| Endpoints de la matriz | 46 de 57: identidad (O6, O9, O10), certificación (O1, O2, O3), O4 enmiendas, O8 asignaciones, O11 bitácora y las cuatro tareas del transmisor. **Faltan O5 certificados y O7 consentimientos** |
-| Firma de certificados | Pendiente (O5): la llave ya está en Secret Manager |
-| Bitácora | Completa: bandeja de salida, transmisor cada 30 minutos con cadena HMAC, comprobación de la cadena (`cadena`), revocación de lo vencido (`vencer`) y copia semanal a Cloud Storage con retención de diez años (`volcado`) |
+| Endpoints de la matriz | 56 de 57: todos los de la matriz, de O1 a O11. Falta solo `GET /authz/explicar`, que es opcional |
+| Firma de certificados | Completa: Ed25519 con la llave en Secret Manager, verificación pública a partir del archivo (D-09) y huella de la llave publicada (D-10) |
+| Bitácora | Completa: bandeja de salida, transmisor cada 30 minutos con cadena HMAC (Cloud Scheduler), comprobación de la cadena (`cadena`), revocación de lo vencido (`vencer`) y copia semanal a Cloud Storage con retención de diez años (`volcado`) |
 | Informe | Material completo en [docs/Informe_P2.md](docs/Informe_P2.md) |
 
 ## Estructura
@@ -116,6 +116,14 @@ El backend no acepta invocaciones anónimas. Esa es la frontera de confianza F2
 del diseño. El borde lo invoca con su propia cuenta de servicio,
 `verdeazul-edge`, cuyo único permiso es ese.
 
+Al transmisor lo invoca Cloud Scheduler con la cuenta `verdeazul-planificador`,
+que solo puede invocar ese servicio. Hay dos trabajos:
+
+| Trabajo | Cuándo | Qué hace |
+|---|---|---|
+| `transmitir-bitacora` | Cada 30 minutos (D-19) | Copia los eventos de la bandeja a la bitácora |
+| `volcado-bitacora` | Los lunes a las 07:00 UTC | Copia la bitácora al depósito `verdeazul-g4-volcados`, con retención de diez años |
+
 ### Configuración de una sola vez para identidad
 
 Antes del primer despliegue con identidad hay que crear dos cosas en Google
@@ -183,7 +191,17 @@ Cada etiqueta es el commit del que salió la imagen, así que `git show <etiquet
 
 | Etiqueta | Imágenes | Fecha | Qué trajo |
 |---|---|---|---|
-| `72ba002` | api, policies, edge | 2026-11-10 | PR #17: el verificador ve las mediciones. **Es la que corre hoy** |
+| `cdd6037` | api, policies, edge, transmisor | 2026-11-17 | PR #36: O5 completo, listar, ver, anular y exportar certificados. **Es la que corre hoy** |
+| `73c0c1c` | api, policies, edge, transmisor | 2026-11-17 | PR #35: O7 consentimientos |
+| `3764ccd` | api, policies, edge, transmisor | 2026-11-17 | PR #28: firma Ed25519, emitir con C6 y verificación pública |
+| `cae1933` | api, policies, edge, transmisor | 2026-11-13 | PR #26: tarea `volcado` |
+| `8c28745` | api, policies, edge, transmisor | 2026-11-13 | PR #24: FastAPI y Starlette sin CVE-2025-62727 |
+| `041c0fb` | api, policies, edge, transmisor | 2026-11-13 | PR #23: tareas `vencer` y `cadena` |
+| `beb3b2b` | api, policies, edge, transmisor | 2026-11-13 | PR #22: O8 asignaciones |
+| `13b1c10` | api, policies, edge, transmisor | 2026-11-13 | PR #21: O4 enmiendas |
+| `0c06e52` | api, policies, edge, transmisor | 2026-11-13 | PR #20: O11 bitácora y la tarea `transmitir` |
+| `f54ff90` | api, policies, edge, transmisor | 2026-11-12 | PR #19: primer despliegue del transmisor y la llave de firma |
+| `72ba002` | api, policies, edge | 2026-11-10 | PR #17: el verificador ve las mediciones |
 | `129ffba` | api, policies, edge | 2026-11-10 | PR #16: certificación, O1 fincas, O2 períodos y O3 mediciones |
 | `8a1cd06` | api, policies, edge | 2026-11-10 | PR #15: identidad, O6, O9 y O10, y el borde con su propia cuenta de servicio |
 | `bdec178` | api, policies, edge | 2026-11-09 | Despliegue de `develop` con el PR #13 |
