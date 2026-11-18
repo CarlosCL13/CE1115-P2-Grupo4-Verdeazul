@@ -256,8 +256,8 @@ polígono y el índice GiST de los que depende C6 de la persona 5.
 |---|---|---|---|---|
 | `GET /periodos` | Ver los períodos y su estado. Seis de los ocho roles pueden (la matriz da `—` al administrativo y al tercero) | tabla `periodos_medicion` | — | Hecho |
 | `GET /periodos/{id}` | Ver un período concreto | — | — | Hecho |
-| `POST /periodos` | La Dirección de Certificación abre un período nuevo. Nace ABIERTO. Reautenticación, bitácora | Ab | D-17 | Hecho |
-| `POST /periodos/{id}/abrir` | Reabrir un período cerrado. Reautenticación, bitácora | Ab | D-17 | Hecho |
+| `POST /periodos` | La Dirección de Certificación abre un período nuevo. Nace ABIERTO. Reautenticación, bitácora. 409 si ya hay otro abierto | Ab | D-17, D-22 | Hecho |
+| `POST /periodos/{id}/abrir` | Reabrir un período cerrado. Reautenticación, bitácora. 409 si ya hay otro abierto | Ab | D-17, D-22 | Hecho |
 | `POST /periodos/{id}/cerrar` | Cerrarlo cuando no quedan mediciones sin aprobar | bitácora | — | Hecho |
 
 `periodo.estado` es lo que miran C2 y C11. Si cambia de nombre, cambian las

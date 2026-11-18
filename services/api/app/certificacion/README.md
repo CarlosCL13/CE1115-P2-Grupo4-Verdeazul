@@ -59,8 +59,8 @@ sus plantillas en `services/edge/templates/certificacion/`.
 | `GET /fincas`, `GET /fincas/{id}` | Ver fincas (L, con C1, C7 o C8 según el rol) |
 | `POST /fincas`, `PATCH /fincas/{id}` | Registrar y corregir una finca (Personal Administrativo) |
 | `GET /periodos`, `GET /periodos/{id}` | Ver períodos |
-| `POST /periodos` | Abrir un período nuevo (Ab), D-17 |
-| `POST /periodos/{id}/abrir`, `/cerrar` | Reabrir y cerrar (Ab, Cr), con reautenticación |
+| `POST /periodos` | Abrir un período nuevo (Ab), D-17. Solo si no hay otro abierto (D-22) |
+| `POST /periodos/{id}/abrir`, `/cerrar` | Reabrir y cerrar (Ab, Cr), con reautenticación. Reabrir, solo si no hay otro abierto (D-22) |
 | `GET /mediciones`, `GET /mediciones/{id}` | Ver mediciones |
 | `POST /mediciones` | Registrar (C2, y el técnico además en su zona, D-18) |
 | `POST /mediciones/{id}/aprobar`, `/devolver` | El verificador decide (C3). Aprobar pide reautenticación y devolver pide motivo |
