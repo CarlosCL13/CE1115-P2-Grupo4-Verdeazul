@@ -104,7 +104,8 @@ Los secretos viven en Secret Manager y se inyectan como variables de entorno. Ca
 
 *Positivas*
 
-- Ninguna credencial vive en el repositorio ni en las imágenes, cada servicio solo lee lo suyo y el acceso queda registrado.
+- Ninguna credencial vive en el repositorio ni en las imágenes, y cada servicio solo lee lo suyo.
+- Los cambios de configuración y de permisos sobre los secretos quedan en los registros de auditoría de Google Cloud, que vienen activados por omisión.
 - El rol de aplicación tiene privilegios mínimos: no es dueño de las tablas y no puede alterar el esquema.
 - La bitácora vive en una instancia de Neon separada, donde el transmisor solo puede insertar.
 - La tarea `volcado` del transmisor (ADR 007) sube cada semana la bitácora completa, con el eslabón de cada evento, a un depósito de Cloud Storage donde nada se puede borrar ni reemplazar en diez años. Si alguien con la llave reescribe la cadena en Neon, la versión reescrita deja de coincidir con las copias anteriores, que ya no puede tocar. La tarea `cadena` además recalcula la cadena completa y deja constancia de cada comprobación en la propia bitácora.
@@ -114,6 +115,7 @@ Los secretos viven en Secret Manager y se inyectan como variables de entorno. Ca
 - Si la credencial de la base se filtra, sigue sirviendo hasta que alguien la cambie. Con OpenBao caducaba en 24 horas.
 - Quien comprometa el proceso del transmisor puede reescribir la cadena completa y no se notaría en Neon. La garantía baja de «nadie con acceso a la base puede falsificar el historial» a «nadie con acceso a la base, pero sí quien controle el transmisor».
 - La llave de los datos personales está en el proceso, en lugar de estar encerrada en un motor que solo responde operaciones.
+- Las lecturas de un secreto no quedan registradas. El registro de acceso a datos de Google Cloud viene apagado y no lo activamos, así que no se puede saber quién leyó un secreto ni cuándo.
 - El sistema queda atado al proveedor de nube, que era lo que P1 quería evitar.
 
 ## ADR 004 (D-04)
