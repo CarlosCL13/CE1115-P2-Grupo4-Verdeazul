@@ -21,6 +21,11 @@ operacion Ab y `/abrir` queda para reabrir. Es la desviacion D-17.
 `periodo.estado` es lo que miran C2 y C11. El cierre y el registro de
 mediciones se serializan con un bloqueo sobre la fila del periodo, para que
 una medicion no entre justo mientras el periodo se cierra.
+
+Solo puede haber un periodo abierto a la vez (D-22): crear uno nuevo o
+reabrir uno cerrado responde 409 si ya hay otro abierto. Las dos operaciones
+toman primero el mismo candado, para que dos personas abriendo a la vez no
+dejen dos abiertos.
 """
 
 import re
@@ -43,6 +48,22 @@ _ETIQUETA = re.compile(r"^[A-Za-z0-9][A-Za-z0-9-]{1,18}[A-Za-z0-9]$")
 
 SELECT_PERIODO = ("SELECT id, etiqueta, estado::text AS estado, abierto_en, "
                   "cerrado_en FROM periodos_medicion ")
+
+# Lo toman crear y reabrir. Dos enteros, como el de C6 en certificados
+# (5, 6): ese espacio de llaves no choca con el de un solo entero que usa el
+# transmisor. El 2 es por O2.
+CANDADO_ABRIR = "SELECT pg_advisory_xact_lock(2, 1)"
+
+
+def _exigir_ninguno_abierto(cur) -> None:
+    """Un solo periodo abierto a la vez (D-22). Llamar con el candado tomado."""
+    cur.execute("SELECT etiqueta FROM periodos_medicion "
+                "WHERE estado = 'ABIERTO' LIMIT 1")
+    abierto = cur.fetchone()
+    if abierto is not None:
+        raise ErrorAPI(409, "ya_hay_un_periodo_abierto",
+                       "Ya hay un período abierto (%s). Ciérrenlo antes de "
+                       "abrir otro." % abierto["etiqueta"])
 
 
 class NuevoPeriodo(BaseModel):
@@ -90,6 +111,8 @@ def abrir_periodo_nuevo(datos: NuevoPeriodo,
         if cur.fetchone() is not None:
             raise ErrorAPI(409, "etiqueta_repetida",
                            "Ya existe un período con esa etiqueta.")
+        cur.execute(CANDADO_ABRIR)
+        _exigir_ninguno_abierto(cur)
         cur.execute("INSERT INTO periodos_medicion (etiqueta) VALUES (%s) "
                     "RETURNING id", (datos.etiqueta,))
         nuevo = cur.fetchone()["id"]
@@ -103,6 +126,10 @@ def _cambiar(periodo_id: int, sesion, operacion: str, desde: str, hacia: str,
              accion: str) -> dict:
     with bd.transaccion() as cur:
         objeto = "O2:%d" % periodo_id
+        if hacia == estados.PERIODO_ABIERTO:
+            # Primero el candado y despues la fila, igual que al crear, para
+            # que dos aperturas cruzadas no se esperen una a la otra.
+            cur.execute(CANDADO_ABRIR)
         cur.execute(SELECT_PERIODO + "WHERE id = %s FOR UPDATE", (periodo_id,))
         fila = cur.fetchone()
         if fila is None:
@@ -119,6 +146,7 @@ def _cambiar(periodo_id: int, sesion, operacion: str, desde: str, hacia: str,
             cur.execute("UPDATE periodos_medicion SET estado = 'CERRADO', "
                         "cerrado_en = now() WHERE id = %s", (periodo_id,))
         else:
+            _exigir_ninguno_abierto(cur)
             cur.execute("UPDATE periodos_medicion SET estado = 'ABIERTO', "
                         "cerrado_en = NULL WHERE id = %s", (periodo_id,))
         registrar(accion=accion, sujeto=sesion.sujeto.id, objeto=objeto,

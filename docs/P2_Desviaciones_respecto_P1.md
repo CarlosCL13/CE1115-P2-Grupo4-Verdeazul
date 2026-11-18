@@ -31,6 +31,7 @@ El modelo de control de acceso no cambia. Los ocho roles, los once objetos, las 
 | D-19 | El transmisor corre cada media hora, no casi en tiempo real | Límites del plan gratuito de Neon |
 | D-20 | C9 se ata a la finca, y C6 compara el interior de los polígonos | Hueco del diseño |
 | D-21 | Anular un certificado y autorizar a un tercero piden reautenticación | Refuerzo de la matriz |
+| D-22 | Un solo período de medición abierto a la vez | Hueco del diseño |
 
 ## D-01. La plataforma de alojamiento es software propietario
 
@@ -227,3 +228,13 @@ P1 (Tabla 7.1) vuelve a pedir el factor antes de aprobar, emitir, abrir y cerrar
 - **Autorizar a un tercero o extender una autorización** (C y M sobre O7). Es entregarle información del dueño a otra persona (Ley 8968, art. 14).
 
 Revocar una autorización no pide reautenticación a propósito: es la acción que protege al dueño y no debe costarle nada. El efecto es un paso más para el dueño y para la Dirección de Certificación en esas acciones; no cambia ninguna celda de la matriz.
+
+## D-22. Un solo período de medición abierto a la vez
+
+P1 define los períodos como «ventanas de registro, con su estado abierto o cerrado», y la única regla sobre ellos es C2: solo se registran mediciones en uno abierto. No dice cuántos puede haber abiertos a la vez, y el sistema dejaba abrir varios. Con dos abiertos, un técnico podía registrar la misma finca en las dos ventanas al mismo tiempo, y quedaba ambiguo a qué período pertenecía cada medición.
+
+Lo limitamos a uno. Crear un período o reabrir uno cerrado responde 409 si ya hay otro abierto, y las dos operaciones toman primero el mismo candado, para que dos aperturas simultáneas no dejen dos abiertos. Ninguna celda de la matriz cambia.
+
+La regla vive en el servidor y no en la base. Un índice único en la base sería más fuerte, porque la impondría aunque el código tuviera un error, pero las pruebas de integración crean períodos abiertos directo en una base compartida, y habría que rehacerlas en cinco módulos. La implicación es que con la credencial de `app_rw`, que solo tiene la aplicación, se podría abrir un segundo período por SQL saltándose la regla.
+
+El costo operativo es que el período nuevo no se puede abrir hasta cerrar el anterior, y cerrar exige que no queden mediciones sin revisar. Si la verificación se atrasa, frena el registro del período siguiente.
