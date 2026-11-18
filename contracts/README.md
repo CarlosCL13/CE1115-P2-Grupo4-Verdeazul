@@ -54,8 +54,7 @@ Lo grande ya está. Queda esto:
 | # | Qué | Quién | Por qué |
 |---|---|---|---|
 | 1 | Armar el informe final, de 6 a 10 páginas, a partir de [docs/Informe_P2.md](../docs/Informe_P2.md), con las 15 capturas de su sección 7 | Por decidir | Es el entregable 3 y vale 10 puntos. Hoy es material, no el documento |
-| 2 | D-07 dice que el volcado va a un depósito «con retención bloqueada». La retención de diez años está configurada, pero no bloqueada | Carlos | Bloquearla es irreversible por diez años. La alternativa es corregir el texto de D-07 |
-| 3 | `GET /authz/explicar` | Opcional | Muestra en vivo el motivo de una decisión del motor |
+| 2 | `GET /authz/explicar` | Opcional | Muestra en vivo el motivo de una decisión del motor |
 
 Los pull request abiertos de Dependabot no se mergean antes de entregar: dos
 suben de versión mayor las acciones con las que se despliega.
