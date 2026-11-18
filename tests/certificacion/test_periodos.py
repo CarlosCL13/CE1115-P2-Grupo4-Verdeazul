@@ -5,6 +5,17 @@ import pytest
 from conftest import entrar
 
 
+def _cerrar_los_abiertos(fabrica):
+    """Cierra los periodos que dejaron abiertos otras pruebas.
+
+    La base de pruebas es compartida y cada prueba crea sus periodos abiertos
+    directo en la base. Como solo puede haber uno abierto a la vez (D-22), las
+    pruebas que abren por la API empiezan sin ninguno.
+    """
+    fabrica.sql("UPDATE periodos_medicion SET estado = 'CERRADO', "
+                "cerrado_en = now() WHERE estado = 'ABIERTO'")
+
+
 def test_seis_roles_leen_los_periodos(api, fabrica):
     periodo = fabrica.periodo()
     # La matriz da L sobre O2 a seis roles. PA y el tercero tienen "-" (el
@@ -43,6 +54,7 @@ def test_abrir_un_periodo_nuevo_pide_reautenticacion(api, fabrica):
 
 
 def test_direccion_de_certificacion_abre_y_cierra(api, fabrica):
+    _cerrar_los_abiertos(fabrica)
     dc = fabrica.cuenta("DIRECCION_CERTIFICACION")
     h = entrar(api, fabrica, dc, reautenticar=True)
     etiqueta = "T-" + dc["usuario"][-8:]
@@ -63,6 +75,35 @@ def test_direccion_de_certificacion_abre_y_cierra(api, fabrica):
                     ).json()["detail"] == "estado_invalido"
     for accion in ("PERIODO_ABIERTO", "PERIODO_CERRADO"):
         assert fabrica.eventos(accion, dc["id"])
+
+
+def test_solo_un_periodo_abierto_a_la_vez(api, fabrica):
+    _cerrar_los_abiertos(fabrica)
+    dc = fabrica.cuenta("DIRECCION_CERTIFICACION")
+    h = entrar(api, fabrica, dc, reautenticar=True)
+    sufijo = dc["usuario"][-8:]
+
+    r = api.post("/periodos", headers=h, json={"etiqueta": "A-" + sufijo})
+    assert r.status_code == 201, r.text
+    primero = r.json()["id"]
+
+    # Con uno abierto, no se crea otro.
+    r = api.post("/periodos", headers=h, json={"etiqueta": "B-" + sufijo})
+    assert r.status_code == 409
+    assert r.json()["detail"] == "ya_hay_un_periodo_abierto"
+
+    # Cerrado el primero, si.
+    assert api.post("/periodos/%d/cerrar" % primero, headers=h
+                    ).status_code == 200
+    r = api.post("/periodos", headers=h, json={"etiqueta": "B-" + sufijo})
+    assert r.status_code == 201, r.text
+
+    # Y con el segundo abierto, el primero no se puede reabrir.
+    r = api.post("/periodos/%d/abrir" % primero, headers=h)
+    assert r.status_code == 409
+    assert r.json()["detail"] == "ya_hay_un_periodo_abierto"
+    assert fabrica.sql("SELECT count(*) AS n FROM periodos_medicion "
+                       "WHERE estado = 'ABIERTO'")[0]["n"] == 1
 
 
 def test_etiqueta_con_caracteres_raros_se_rechaza(api, fabrica):
