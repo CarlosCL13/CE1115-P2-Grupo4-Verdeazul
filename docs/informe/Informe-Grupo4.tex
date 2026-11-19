@@ -390,20 +390,18 @@ Sistema desplegado & \url{\urlSistema}\\
 Repositorio        & \url{\urlRepo}\\
 Google Cloud       & Proyecto \ruta{verdeazul-g4}, regi\'on \ruta{us-east4}\\
 Neon               & \ruta{verdeazul-app} (principal) y \ruta{verdeazul-bitacora} (bit\'acora), AWS \ruta{us-east-1}\\
-Versi\'on entregada & \pendiente{etiqueta de las im\'agenes desplegadas el d\'ia de la entrega (los 7 caracteres del commit)}\\
+Versi\'on entregada & \ruta{0957249}: la etiqueta de las im\'agenes de los tres servicios, que es el commit de donde salieron; aparece al pie de cada p\'agina del sistema\\
 \bottomrule
 \end{tabular}
 \end{center}
 
-\paragraph{Credenciales de prueba.} Hay una cuenta por rol: \ruta{dg},
+\paragraph{Cuentas de prueba.} Hay una cuenta por rol: \ruta{dg},
 \ruta{dc}, \ruta{pa}, \ruta{tc1}, \ruta{tc2}, \ruta{vf1}, \ruta{vf2},
 \ruta{ae}, \ruta{df1}, \ruta{df2} y \ruta{ta}. Las de \ruta{dg}, \ruta{dc},
-\ruta{pa}, \ruta{vf1} y \ruta{vf2} piden adem\'as un c\'odigo TOTP.
-\pendiente{decidir con el grupo c\'omo se le entregan las contrase\~nas y las
-l\'ineas otpauth al profesor: por un canal aparte o en un anexo de este PDF.
-Nunca en el repositorio.}
+\ruta{pa}, \ruta{vf1} y \ruta{vf2} piden adem\'as un c\'odigo TOTP. Las
+contrase\~nas no van en este documento ni en el repositorio.
 
-\clearpage
+\medskip
 
 % ============================================================================
 % 1. ARQUITECTURA DESPLEGADA                            Responsable: Adriel
@@ -1176,8 +1174,8 @@ lee los suyos. La captura muestra la lista sin abrir ning\'un valor.}
   {\small Dependabot revisa las dependencias de Python, las im\'agenes de
   Docker y las acciones de GitHub, y abre un \emph{pull request} por cada
   versi\'on nueva o vulnerabilidad conocida, que pasa por el mismo CI. Ya
-  encontr\'o una real, CVE-2025-62727 en Starlette, que se atendi\'o y se
-  document\'o en \ruta{docs/Dependabot.md}.\par}
+  encontr\'o una real, CVE-2025-62727 en Starlette, que se atendi\'o en el
+  PR \#24. La decisi\'on sobre cada PR est\'a en \ruta{docs/Dependabot.md}.\par}
   \medskip
   \begin{subfigure}{\linewidth}
     \centering

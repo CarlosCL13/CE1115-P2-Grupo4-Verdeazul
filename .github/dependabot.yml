@@ -3,13 +3,27 @@
 #
 # Ojo: este archivo configura las ACTUALIZACIONES DE VERSION. Las ALERTAS de
 # seguridad son otra cosa y se encienden en Settings -> Code security del
-# repositorio. El enunciado pide las dos: que este activo, y que si aparece una
-# alerta durante el proyecto se atienda al menos una y se documente.
+# repositorio: las reglas `ignore` de aqui no las apagan. El enunciado pide
+# las dos: que este activo, y que si aparece una alerta durante el proyecto
+# se atienda al menos una y se documente (docs/Dependabot.md).
 #
 # Un ecosistema por componente: Dependabot no busca de forma recursiva, asi que
 # cada directorio con requirements.txt o Dockerfile necesita su entrada. Si
 # alguien agrega un componente nuevo y olvida la entrada, sus dependencias
 # quedan sin vigilar.
+#
+# Los PR apuntan a develop, que es donde se integra (antes nacian contra main).
+# Sin etiquetas: las que habia no existian en el repositorio y cada PR traia
+# un aviso por eso.
+#
+# Lo que NO se propone, porque puede romper el sistema sin que el CI lo note
+# (ver docs/Dependabot.md, segunda ronda):
+#   - versiones nuevas de Python en las imagenes (3.14 -> 3.15)
+#   - versiones menores o mayores de OPA, el motor que decide todo
+#   - versiones mayores de las acciones de GitHub (las de despliegue no las
+#     ejercita el CI)
+# Los parches siguen llegando, y estas reglas se quitan cuando se quiera dar
+# el salto a proposito.
 
 version: 2
 
@@ -17,77 +31,104 @@ updates:
   # --- Paquetes de Python, uno por servicio --------------------------------
   - package-ecosystem: pip
     directory: /services/api
+    target-branch: develop
     schedule:
       interval: weekly
       day: monday
     open-pull-requests-limit: 5
-    labels: [dependencias, seguridad]
     groups:
       python-api:
         patterns: ["*"]
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: pip
     directory: /services/edge
+    target-branch: develop
     schedule:
       interval: weekly
       day: monday
     open-pull-requests-limit: 5
-    labels: [dependencias, seguridad]
     groups:
       python-edge:
         patterns: ["*"]
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: pip
     directory: /services/transmisor
+    target-branch: develop
     schedule:
       interval: weekly
       day: monday
     open-pull-requests-limit: 5
-    labels: [dependencias, seguridad]
     groups:
       python-transmisor:
         patterns: ["*"]
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
 
   # --- Imagenes base de los cuatro componentes -----------------------------
+  # Python: solo parches de la imagen 3.14-slim, no 3.15.
   - package-ecosystem: docker
     directory: /services/api
+    target-branch: develop
     schedule:
       interval: weekly
       day: monday
     open-pull-requests-limit: 3
-    labels: [dependencias, contenedores]
+    ignore:
+      - dependency-name: "python"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
 
   - package-ecosystem: docker
     directory: /services/edge
+    target-branch: develop
     schedule:
       interval: weekly
       day: monday
     open-pull-requests-limit: 3
-    labels: [dependencias, contenedores]
+    ignore:
+      - dependency-name: "python"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
 
+  # OPA: solo parches de la version que esta probada contra la matriz.
   - package-ecosystem: docker
     directory: /services/policies
+    target-branch: develop
     schedule:
       interval: weekly
       day: monday
     open-pull-requests-limit: 3
-    labels: [dependencias, contenedores]
+    ignore:
+      - dependency-name: "openpolicyagent/opa"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
 
   - package-ecosystem: docker
     directory: /services/transmisor
+    target-branch: develop
     schedule:
       interval: weekly
       day: monday
     open-pull-requests-limit: 3
-    labels: [dependencias, contenedores]
+    ignore:
+      - dependency-name: "python"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
 
   # --- Las acciones de los workflows ---------------------------------------
   # Una accion comprometida corre con acceso al repositorio, asi que vigilarlas
-  # no es higiene menor.
+  # no es higiene menor. Las versiones mayores no: las de despliegue solo
+  # corren al desplegar, no en el CI.
   - package-ecosystem: github-actions
     directory: /
+    target-branch: develop
     schedule:
       interval: weekly
       day: monday
     open-pull-requests-limit: 3
-    labels: [dependencias]
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]

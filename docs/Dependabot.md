@@ -74,6 +74,40 @@ salto de versión mayor. Con las versiones nuevas:
 Con esto el PR de Dependabot de `pip` queda resuelto: Dependabot lo cierra
 solo cuando la versión que proponía llega a `develop`.
 
+## Segunda ronda (16 de noviembre)
+
+Dependabot abrió siete PR nuevos. El criterio para decidir cada uno es qué
+tan bien lo prueba el CI: un PR solo se acepta si los checks ejercitan lo que
+cambia.
+
+| PR | Cambio | Qué prueba el CI | Decisión |
+|---|---|---|---|
+| #34 | Transmisor: `fastapi` 0.162.2 → 0.162.7, `psycopg` 3.3.8 → 3.3.9 (parches) | Las pruebas del transmisor (cadena, vencer, volcado, transmitir) y la construcción de la imagen | Seguro de aceptar; después de la entrega, junto con #32 y #31 |
+| #32 | Backend: los mismos dos parches | La matriz contra OPA y todas las pruebas de integración contra PostgreSQL usan las dependencias del backend | Después de la entrega |
+| #31 | Borde: `fastapi` 0.162.2 → 0.162.7 | Desde esta ronda, el job «Borde» del CI ejercita las páginas, los formularios y las cabeceras | Después de la entrega |
+| #33 | OPA 1.4.2 → 1.22.4 | La matriz y `opa test` corren con la versión del Dockerfile | Después de la entrega: es un salto de 18 versiones del motor que decide todo |
+| #5 | `gitleaks-action` v2 → v3 | Es el propio job de gitleaks | Después de la entrega |
+| #29, #30 | `google-github-actions/auth` y `setup-gcloud` v2 → v3 | **Nada**: solo se usan en `desplegar.yml`, que no corre en el CI | Después de la entrega, con un despliegue vigilado |
+| #1 | Python 3.14 → 3.15 en el borde | La construcción de la imagen | Cerrado: versión mayor, ignorada con `@dependabot ignore this major version` |
+
+La alerta que el enunciado pide atender ya se atendió en la primera ronda
+(PR #24). En esta no hay ninguna vulnerabilidad: son versiones nuevas, y el
+día de la presentación no se cambia el sistema que se va a mostrar. Quedan
+registradas con la razón de cada una.
+
+**Lo que se ajustó en `dependabot.yml` a partir de esta ronda:**
+
+- Los PR apuntan a `develop` (`target-branch`), que es donde se integra. Antes
+  nacían contra `main` y Dependabot tenía que cambiarles la base.
+- Se quitaron las etiquetas `dependencias`, `seguridad` y `contenedores`:
+  no existían en el repositorio y cada PR traía un aviso por eso.
+- Ya no se proponen los saltos que pueden romper el sistema sin que el CI lo
+  note: versiones nuevas de Python en las imágenes, versiones menores o
+  mayores de OPA (el motor que decide todo) y versiones mayores de las
+  acciones de GitHub. Siguen llegando los parches, y las alertas de seguridad
+  no dependen de estas reglas: esas se configuran aparte, en Settings → Code
+  security.
+
 ## Lo que queda abierto
 
 - **Python 3.15** en las imágenes: después de la entrega, y en los cuatro
