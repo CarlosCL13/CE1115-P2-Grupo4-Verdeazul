@@ -1,0 +1,1836 @@
+% ============================================================================
+% docs/informe/Informe-Grupo4.tex -- Informe de implementacion (Proyecto 2,
+% entregable 3). CE-1115 Seguridad de la Informacion -- Grupo 4
+%
+% Un solo archivo: todas las secciones van aqui adentro, cada una con su
+% bloque de comentarios y su responsable. Las capturas van en docs/informe/img.
+%
+% Este archivo reemplaza a docs/Informe_P2.md, docs/P2_Desviaciones_respecto_P1.md
+% y docs/Preguntas_abiertas.md: su contenido ya esta aqui (las desviaciones
+% completas, como ADR, en el Anexo A).
+%
+%   Seccion del enunciado (5.1)            Archivo                       Responsable  Paginas
+%   0. Datos de entrega                    secciones/00-datos.tex        Meibel       0,5
+%   1. Arquitectura desplegada             secciones/01-arquitectura.tex Adriel       1,5
+%   2. Controles implementados             secciones/02-controles.tex    Henry        2
+%   3. Gestion de secretos                 secciones/03-secretos.tex     Carlos       1
+%   4. Seguridad heredada de la plataforma secciones/04-plataforma.tex   Carlos       1
+%   5. Desviaciones respecto al diseno     secciones/05-desviaciones.tex Adriel       0,5
+%   6. Cobertura de la matriz              secciones/06-cobertura.tex    Ludwin       2
+%   7. Evidencia                           secciones/07-evidencia.tex    Meibel       1,5
+%                                                                         Total       10
+%
+% El enunciado pide de 6 a 10 paginas. Se cuentan desde la seccion 1; la
+% portada y el indice quedan fuera. Si una seccion se pasa de su
+% presupuesto, se recorta ella: no se le quita espacio a otra.
+%
+% Las secciones de Henry (2) y Ludwin (6) ya traen un borrador pasado desde
+% el material que habia en docs/Informe_P2.md: revisarlo, ajustarlo y recortarlo.
+%
+% Las capturas van en img/. Si falta una, el documento compila igual y
+% muestra un recuadro gris con el nombre del archivo.
+%
+% \pendiente{...} marca en rojo lo que falta. Antes de entregar no debe quedar
+% ninguno:   grep -n "pendiente{" Informe-Grupo4.tex
+%
+% Compilar (desde docs/informe):  pdflatex Informe-Grupo4.tex  (dos veces)
+%                       o bien:  latexmk -pdf Informe-Grupo4.tex
+% (o en Overleaf: subir la carpeta completa y compilar este archivo)
+% ============================================================================
+\documentclass[11pt,a4paper]{article}
+
+% ============================================================================
+% 1. METADATOS DEL DOCUMENTO
+% ============================================================================
+\newcommand{\docInstitute}{Tecnol\'ogico de Costa Rica}
+\newcommand{\docSchool}{Escuela de Ingenier\'ia en Computadores}
+\newcommand{\docCourse}{Seguridad de la Informaci\'on}
+\newcommand{\docCode}{CE-1115}
+\newcommand{\docKicker}{Proyecto 2}
+\newcommand{\docTitle}{Informe de implementaci\'on}
+\newcommand{\docSubtitle}{Cliente: Verdeazul Carbono S.A. --- Certificaci\'on de captura de carbono, P\'erez Zeled\'on}
+\newcommand{\docTagline}{Del dise\~no a un sistema que corre en la nube}
+\newcommand{\docProject}{Implementaci\'on y despliegue del sistema de certificaci\'on\\[0.3cm] de captura de carbono de Verdeazul Carbono S.A.}
+\newcommand{\docKeywords}{Cloud Run \textbullet\ Neon \textbullet\ Secret Manager \textbullet\ OPA \textbullet\ Ed25519}
+\newcommand{\docGroup}{Grupo 4}
+\newcommand{\docProfessor}{MSc. Andr\'es F. Vargas Rivera}
+\newcommand{\docSemester}{II Semestre, 2026}
+\newcommand{\docDate}{20 de noviembre}
+\newcommand{\docPlace}{Cartago, Costa Rica}
+\newcommand{\docShortTitle}{P2 --- Informe de implementaci\'on --- \docGroup}
+
+% Datos del sistema, para no repetirlos a mano en cada seccion
+\newcommand{\urlSistema}{https://verdeazul-edge-igwgmkeipa-uk.a.run.app}
+\newcommand{\urlRepo}{https://github.com/CarlosCL13/CE1115-P2-Grupo4-Verdeazul}
+
+% Integrantes: {Nombre}{Carne}
+\newcommand{\docMembers}{%
+  \member{Meibel Ceciliano}{2020023333}
+  \member{Carlos Contreras}{2021476501}
+  \member{Ludwin Ramos}{2021032537}
+  \member{Henry Nu\~nez}{2022089224}
+  \member{Adriel Chaves}{2021031465}}
+\newcommand{\docAuthor}{Meibel Ceciliano, Carlos Contreras, Ludwin Ramos, Henry Nu\~nez, Adriel Chaves}
+
+% ============================================================================
+% 2. IDIOMA Y FUENTES
+% ============================================================================
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage[spanish,es-tabla,es-nodecimaldot,es-noquoting]{babel}
+\usepackage[autostyle,spanish=mexican]{csquotes}
+\usepackage{microtype}
+
+% ============================================================================
+% 3. MATEMATICA Y UNIDADES
+% ============================================================================
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{mathtools}
+\usepackage{siunitx}
+\sisetup{per-mode=symbol,range-units=single,output-decimal-marker={,}}
+
+% ============================================================================
+% 4. COLORES
+% ============================================================================
+\usepackage[table]{xcolor}
+\definecolor{tecnavy}{RGB}{31,56,100}
+\definecolor{tecsteel}{RGB}{46,85,150}
+\definecolor{teclight}{RGB}{214,227,243}
+\definecolor{tecrule}{RGB}{155,184,216}
+\definecolor{boxbg}{RGB}{242,246,252}
+\definecolor{labelgray}{RGB}{120,120,120}
+\definecolor{codebg}{RGB}{248,248,248}
+\definecolor{codekw}{RGB}{0,0,180}
+\definecolor{codecmt}{RGB}{0,120,60}
+\definecolor{codestr}{RGB}{170,55,55}
+% Niveles de clasificacion de activos
+\definecolor{nivelpublico}{RGB}{220,240,220}
+\definecolor{nivelinterno}{RGB}{214,227,243}
+\definecolor{nivelconfidencial}{RGB}{255,236,200}
+\definecolor{nivelrestringido}{RGB}{250,215,215}
+
+% ============================================================================
+% 5. GRAFICOS Y TIKZ
+% ============================================================================
+\usepackage{graphicx}
+\graphicspath{{img/}{figures/}{./}}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric,calc,fit,
+                backgrounds,patterns,decorations.pathreplacing,babel}
+
+% ============================================================================
+% 6. TABLAS, FLOTANTES Y LISTAS
+% ============================================================================
+\usepackage{float}
+\usepackage{rotating}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{makecell}
+\usepackage{longtable}
+\usepackage[justification=centering]{caption}
+\usepackage{subcaption}
+\usepackage{tabularx}
+\usepackage{xltabular}
+\usepackage{adjustbox}
+\usepackage{pdflscape}
+\usepackage{enumitem}
+
+% Tipos de columna: P, C, R con ancho fijo; Y flexible alineada a la izquierda
+\newcolumntype{P}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+\newcolumntype{R}[1]{>{\raggedleft\arraybackslash}p{#1}}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\renewcommand{\arraystretch}{1.15}
+\setlength{\tabcolsep}{5pt}
+\setlist[itemize]{leftmargin=*,noitemsep,topsep=2pt}
+\setlist[enumerate]{leftmargin=*,noitemsep,topsep=2pt}
+
+% Etiquetas de continuacion para tablas que se parten entre paginas
+\newcommand{\contnext}[1]{%
+  \multicolumn{#1}{r@{}}{\footnotesize\itshape Contin\'ua en la p\'agina siguiente}\\}
+\newcommand{\contprev}[1]{%
+  \multicolumn{#1}{@{}l}{\footnotesize\itshape
+    Tabla \thetable{} -- viene de la p\'agina anterior}\\}
+
+% Encabezado de tabla con fondo institucional
+\newcommand{\thd}[1]{\cellcolor{tecnavy}\textcolor{white}{\textbf{#1}}}
+
+% Entornos de definicion y observacion
+\theoremstyle{definition}
+\newtheorem{definicion}{Definici\'on}[section]
+\newtheorem{politica}{Pol\'itica}[section]
+\theoremstyle{remark}
+\newtheorem*{observacion}{Observaci\'on}
+
+% ============================================================================
+% 7. CODIGO FUENTE (LISTINGS)
+% ============================================================================
+\usepackage{listings}
+\renewcommand{\lstlistingname}{C\'odigo}
+\renewcommand{\lstlistlistingname}{\'Indice de c\'odigos}
+\lstdefinestyle{code}{
+  basicstyle=\ttfamily\footnotesize,
+  keywordstyle=\color{codekw}\bfseries,
+  commentstyle=\color{codecmt}\itshape,
+  stringstyle=\color{codestr},
+  backgroundcolor=\color{codebg},
+  numbers=left,
+  numberstyle=\tiny\color{labelgray},
+  numbersep=8pt,
+  frame=single,
+  rulecolor=\color{tecrule},
+  breaklines=true,
+  breakatwhitespace=false,
+  postbreak=\mbox{\textcolor{tecsteel}{$\hookrightarrow$}\space},
+  showspaces=false,
+  showstringspaces=false,
+  tabsize=2,
+  captionpos=b,
+  columns=flexible,
+  upquote=true,
+  literate={á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1
+           {ñ}{{\~n}}1 {Á}{{\'A}}1 {É}{{\'E}}1 {Í}{{\'I}}1 {Ó}{{\'O}}1
+           {Ú}{{\'U}}1 {Ñ}{{\~N}}1 {¿}{{?`}}1 {¡}{{!`}}1
+}
+\lstset{style=code}
+
+% ============================================================================
+% 8. DISENO DE PAGINA, TITULOS Y ENCABEZADOS
+% ============================================================================
+\usepackage[a4paper,margin=1in,headheight=15pt]{geometry}
+\usepackage{setspace}
+\setstretch{1.10}
+\usepackage{ragged2e}
+
+% Titulos de seccion con el color institucional
+\usepackage{titlesec}
+\titleformat{\section}
+  {\Large\bfseries\color{tecnavy}}{\thesection.}{0.6em}{}
+\titleformat{\subsection}
+  {\large\bfseries\color{tecsteel}}{\thesubsection.}{0.6em}{}
+\titleformat{\subsubsection}
+  {\normalsize\bfseries\color{tecsteel}}{\thesubsubsection.}{0.6em}{}
+
+% Indice centrado
+\usepackage{tocloft}
+\renewcommand{\cfttoctitlefont}{\hfill\Large\bfseries\color{tecnavy}}
+\renewcommand{\cftaftertoctitle}{\hfill}
+
+% Encabezado y pie de pagina
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\footnotesize\textsc{\docCode}}
+\fancyhead[R]{\footnotesize\docShortTitle}
+\fancyfoot[C]{\footnotesize P\'agina \thepage\ de \pageref{LastPage}}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0pt}
+
+% Numeracion de figuras, tablas y codigos por seccion
+\counterwithin{figure}{section}
+\counterwithin{table}{section}
+\AtBeginDocument{\counterwithin{lstlisting}{section}}
+
+% ============================================================================
+% 9. ENLACES
+% ============================================================================
+\usepackage{hyperref}
+\hypersetup{
+  colorlinks=true,
+  linkcolor=tecnavy,
+  citecolor=tecsteel,
+  urlcolor=tecsteel,
+  bookmarksnumbered=true,
+  pdftitle={\docTitle},
+  pdfauthor={\docAuthor},
+  pdfsubject={\docCourse\ (\docCode) -- \docGroup},
+  pdflang={es}
+}
+\usepackage[spanish]{cleveref}
+% Nombres en espanol coherentes con babel es-tabla: "tabla" (femenino), no
+% "cuadro" (masculino), para que concuerden los articulos del texto.
+\crefname{table}{tabla}{tablas}
+\Crefname{table}{Tabla}{Tablas}
+\crefname{figure}{figura}{figuras}
+\Crefname{figure}{Figura}{Figuras}
+\crefname{section}{sección}{secciones}
+\Crefname{section}{Sección}{Secciones}
+\crefname{subsection}{sección}{secciones}
+\Crefname{subsection}{Sección}{Secciones}
+
+% ============================================================================
+% 10. COMANDOS PROPIOS
+% ============================================================================
+% Cajas de aviso cuando falta un archivo o imagen (el documento compila igual)
+\newcommand{\missingfilebox}[1]{%
+  \par\medskip\noindent
+  \fcolorbox{red!60!black}{red!5}{%
+    \parbox{\dimexpr\linewidth-2\fboxsep-2\fboxrule}{%
+      \centering\ttfamily\small ARCHIVO FALTANTE: \detokenize{#1}}}%
+  \par\medskip}
+
+\newcommand{\missingimagebox}[1]{%
+  \begingroup
+  \setlength{\fboxsep}{0pt}%
+  \fcolorbox{tecrule}{boxbg}{%
+    \parbox[c][2.8cm][c]{6cm}{\centering\ttfamily\scriptsize
+      IMAGEN NO ENCONTRADA\\[3pt]\detokenize{#1}}}%
+  \endgroup}
+
+% \safeimage[opciones]{archivo}: incluye la imagen si existe
+\newcommand{\safeimage}[2][width=0.75\linewidth]{%
+  \IfFileExists{#2}{\includegraphics[#1]{#2}}{%
+    \IfFileExists{img/#2}{\includegraphics[#1]{img/#2}}{%
+      \IfFileExists{figures/#2}{\includegraphics[#1]{figures/#2}}{%
+        \PackageWarning{tecdoc}{Falta la imagen #2}%
+        \missingimagebox{#2}}}}}
+
+% \safelisting[opciones]{archivo}: incluye codigo si existe
+\newcommand{\safelisting}[2][]{%
+  \IfFileExists{#2}{\lstinputlisting[#1]{#2}}{%
+    \PackageWarning{tecdoc}{Falta el codigo #2}%
+    \missingfilebox{#2}}}
+
+% \notebox[Titulo]{texto}: caja destacada
+\newcommand{\notebox}[2][Nota]{%
+  \par\medskip\noindent
+  \fcolorbox{tecrule}{boxbg}{%
+    \parbox{\dimexpr\linewidth-2\fboxsep-2\fboxrule}{%
+      \vspace{2pt}\textbf{\color{tecnavy}#1.}\ #2\vspace{2pt}}}%
+  \par\medskip}
+
+\newcommand{\code}[1]{\texttt{#1}}
+% \ruta{...}: rutas de archivos, endpoints y nombres con guion bajo. Corta la
+% linea en / y _ sin que haya que escapar nada. No usarlo dentro de \caption
+% ni de otro comando: ahi va \code{...} con \_ escrito a mano.
+\usepackage{xurl}
+\DeclareUrlCommand\ruta{\urlstyle{tt}}
+
+% \pendiente{texto}: marca en rojo lo que falta por redactar
+\newcommand{\pendiente}[1]{%
+  \textcolor{codestr}{\textbf{[PENDIENTE:} \textit{#1}\textbf{]}}}
+% \pend: marcador corto para celdas angostas de tablas
+\newcommand{\pend}{\textcolor{codestr}{\textbf{[PEND.]}}}
+
+% ============================================================================
+% 11. PORTADA
+% ============================================================================
+% Portada sencilla, centrada, con el mismo formato que las tareas del curso:
+% institucion, titulo, curso, nombre del proyecto y datos de entrega.
+% Cada integrante va en una linea: Nombre --- Carne.
+\newcommand{\member}[2]{#1 \quad--\quad #2\\[4pt]}
+
+\newcommand{\makecover}{%
+  \thispagestyle{empty}
+  \begingroup
+  \setlength{\parindent}{0pt}
+  \centering
+  \vspace*{\fill}
+
+  {\LARGE\bfseries\color{tecsteel} Instituto \docInstitute\par}
+  \vspace{0.6cm}
+  {\large \docSchool\par}
+
+  \vspace{2.0cm}
+  {\huge\bfseries \docKicker\par}
+  \vspace{0.5cm}
+  {\Large\bfseries \docTitle\par}
+  \vspace{0.5cm}
+  {\large\itshape \docCode\ \docCourse\par}
+
+  \vspace{1.6cm}
+  {\large\bfseries \docProject\par}
+
+  \vspace{1.6cm}
+  {\large Estudiantes:\par}
+  \vspace{0.3cm}
+  {\large \docMembers\par}
+
+  \vspace{1.5cm}
+  {\large Profesor: \docProfessor\par}
+  \vspace{0.5cm}
+  {\large Fecha de entrega: \docDate\par}
+  \vspace{0.5cm}
+  {\large \docSemester\par}
+  \vspace*{\fill}
+
+  \endgroup
+  \newpage}
+
+% ============================================================================
+% 12. CUERPO DEL DOCUMENTO
+% ============================================================================
+\begin{document}
+
+\makecover
+
+\tableofcontents
+\clearpage
+
+% ============================================================================
+% 0. DATOS DE ENTREGA                                   Responsable: Meibel
+% Presupuesto: media pagina. Fuente: docs/Informe_P2.md, seccion 0.
+% ============================================================================
+\section*{Datos de entrega}
+\addcontentsline{toc}{section}{Datos de entrega}
+
+\begin{center}
+\begin{tabular}{@{}P{0.28\linewidth}P{0.66\linewidth}@{}}
+\toprule
+\thd{Elemento} & \thd{Valor}\\
+\midrule
+Sistema desplegado & \url{\urlSistema}\\
+Repositorio        & \url{\urlRepo}\\
+Google Cloud       & Proyecto \ruta{verdeazul-g4}, regi\'on \ruta{us-east4}\\
+Neon               & \ruta{verdeazul-app} (principal) y \ruta{verdeazul-bitacora} (bit\'acora), AWS \ruta{us-east-1}\\
+Versi\'on entregada & \pendiente{etiqueta de las im\'agenes desplegadas el d\'ia de la entrega (los 7 caracteres del commit)}\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Credenciales de prueba.} Hay una cuenta por rol: \ruta{dg},
+\ruta{dc}, \ruta{pa}, \ruta{tc1}, \ruta{tc2}, \ruta{vf1}, \ruta{vf2},
+\ruta{ae}, \ruta{df1}, \ruta{df2} y \ruta{ta}. Las de \ruta{dg}, \ruta{dc},
+\ruta{pa}, \ruta{vf1} y \ruta{vf2} piden adem\'as un c\'odigo TOTP.
+\pendiente{decidir con el grupo c\'omo se le entregan las contrase\~nas y las
+l\'ineas otpauth al profesor: por un canal aparte o en un anexo de este PDF.
+Nunca en el repositorio.}
+
+\clearpage
+
+% ============================================================================
+% 1. ARQUITECTURA DESPLEGADA                            Responsable: Adriel
+% Presupuesto: 1,5 paginas. Fuente: docs/Informe_P2.md, seccion 1.
+%
+% Pide el enunciado: "Diagrama de lo que realmente construyeron:
+% componentes, imagenes y como se comunican."
+%
+% Las etiquetas F1..F6 son las fronteras de confianza de la Parte 1, tal como
+% las define la tabla 4.x del documento de arquitectura: F3 backend->base,
+% F4 backend->motor, F5 navegador<->proveedor de identidad, F6 backend y
+% transmisor->bitacora y gestor de secretos.
+% ============================================================================
+\section{Arquitectura desplegada}
+\label{sec:arquitectura}
+
+El sistema corre en Google Cloud Run, en la regi\'on \ruta{us-east4}, como
+tres servicios construidos a partir de cuatro im\'agenes de Docker publicadas en
+Artifact Registry con la etiqueta de su commit. Los datos viven en dos
+proyectos de Neon y la copia de retenci\'on, en Cloud Storage. El \'unico
+servicio que responde a internet es el borde; el backend y el transmisor
+rechazan cualquier invocaci\'on que no traiga una identidad de Google
+autorizada (\cref{fig:arquitectura}).
+
+\begin{figure}[H]
+\centering
+\resizebox{0.92\linewidth}{!}{%
+\begin{tikzpicture}[
+  font=\small,
+  >={Stealth[length=2.2mm]},
+  caja/.style={draw=tecsteel, fill=boxbg, rounded corners=2pt, align=center,
+               minimum height=12mm, text width=31mm, inner sep=4pt},
+  datos/.style={draw=tecnavy, fill=teclight, cylinder, shape border rotate=90,
+               aspect=0.15, align=center, text width=30mm, minimum height=14mm},
+  etq/.style={font=\footnotesize, fill=white, inner sep=1.5pt, align=center},
+  flecha/.style={->, thick, color=tecnavy},
+  punteada/.style={->, dashed, thick, color=labelgray}
+]
+  % Fuera de Google
+  \node[caja, text width=18mm] (nav) at (0,0) {Navegador};
+
+  % Cloud Run
+  \node[caja] (edge) at (4.6,0) {\textbf{verdeazul-edge}\\imagen \texttt{edge}\\p\'ublico};
+  \node[caja] (api)  at (10.2,0.9) {\textbf{verdeazul-api}\\imagen \texttt{api} (PEP)};
+  \node[caja] (opa)  at (10.2,-1.0) {OPA (PDP)\\imagen \texttt{policies}};
+  \node[caja, text width=37mm] (tra)  at (10.2,-4.6) {\textbf{verdeazul-transmisor}\\imagen \texttt{transmisor}};
+  \begin{scope}[on background layer]
+    \node[draw=tecsteel, dashed, rounded corners, fit=(api)(opa), inner sep=5pt] (apibox) {};
+    \node[font=\footnotesize, color=tecsteel, anchor=south east] at (apibox.north east) {servicio cerrado};
+    \node[draw=tecnavy, thick, rounded corners, fit=(edge)(apibox)(tra), inner sep=12pt] (cr) {};
+    \node[font=\footnotesize\bfseries, color=tecnavy, anchor=south west] at (cr.north west) {Cloud Run, us-east4};
+  \end{scope}
+
+  % Servicios de Google fuera de Cloud Run
+  \node[caja] (sm)  at (10.2,4.2) {Secret Manager};
+  \node[caja] (sch) at (4.6,-4.6) {Cloud Scheduler};
+
+  % Datos
+  \node[datos] (neon) at (16.6,0.9) {Neon\\\texttt{verdeazul-app}};
+  \node[datos] (bit)  at (16.6,-2.2) {Neon\\\texttt{verdeazul-bitacora}};
+  \node[datos] (gcs)  at (16.6,-5.2) {Cloud Storage\\retenci\'on 10 a\~nos};
+
+  % Flujos
+  \draw[flecha] (nav) -- node[etq, above=1pt]{HTTPS\\(F1)} (edge);
+  \draw[flecha] (edge.east) -- node[etq, above=2pt]{HTTPS + token\\de Google (F2)} (api.west);
+  \draw[flecha] (api) -- node[etq, right=2pt]{127.0.0.1 (F4)} (opa);
+  \draw[flecha] (api.east) -- node[etq, above=2pt]{\texttt{app\_rw} (F3)} (neon.west);
+  \draw[flecha] (api.south east) -- node[etq, pos=0.62]{\texttt{log\_reader} (F6)} (bit.north west);
+  \draw[flecha] (tra.north east) -- node[etq, pos=0.3]{\texttt{outbox\_rw} (F3)} (neon.south west);
+  \draw[flecha] (tra.east) -- node[etq, pos=0.55]{\texttt{log\_writer} (F6)} (bit.south west);
+  \draw[flecha] (tra.south east) -- node[etq, below=2pt, pos=0.5]{volcado semanal} (gcs.west);
+  \draw[flecha] (sch) -- node[etq, above=2pt]{OIDC} (tra);
+  \draw[punteada] (sm) -- node[etq, right=2pt]{\texttt{-{}-set-secrets} (F6)} (api);
+  \draw[punteada] (sm.west) -| ([xshift=-9mm]tra.north west) -- (tra.north west);
+\end{tikzpicture}}
+\caption{Lo que corre en producci\'on. Las flechas llenas son llamadas; las
+punteadas, secretos inyectados al arrancar. F1 a F6 son las fronteras de
+confianza de la Parte~1; F5 ya no aparece porque no hay proveedor de identidad
+aparte (D-05).}
+\label{fig:arquitectura}
+\end{figure}
+
+% Tabla: componente de la Parte 1 -> donde quedo.
+\begin{table}[H]
+\centering\footnotesize
+\caption{Componentes de la Parte~1 y d\'onde quedaron.}
+\label{tab:componentes}
+\begin{tabularx}{\linewidth}{@{}P{3.4cm}YP{1.9cm}@{}}
+\toprule
+\thd{Componente (P1)} & \thd{Aqu\'i} & \thd{Imagen}\\
+\midrule
+Proxy inverso e interfaz & \ruta{services/edge} y el TLS de Cloud Run; el \'unico p\'ublico (D-04, D-23) & \ruta{edge}\\
+Backend (PEP) & \ruta{services/api}, solo invocable por la cuenta del borde & \ruta{api}\\
+Motor de pol\'iticas (PDP) & \ruta{services/policies}, contenedor adjunto del backend (D-06) & \ruta{policies}\\
+Proveedor de identidad & Dentro del backend: Argon2id, sesi\'on y TOTP (D-05) & \ruta{api}\\
+Transmisor y trabajos & \ruta{services/transmisor}: transmitir, vencer, cadena y volcado (D-11) & \ruta{transmisor}\\
+Base de datos (PIP) & Neon \ruta{verdeazul-app}, con PostGIS y un rol por servicio & ---\\
+Bit\'acora & Neon \ruta{verdeazul-bitacora}: otra instancia (F6) & ---\\
+Gestor de secretos & Secret Manager, una cuenta de servicio por componente (D-03) & ---\\
+Copia de retenci\'on & Cloud Storage \ruta{verdeazul-g4-volcados}, 10 a\~nos (D-07) & ---\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[H]
+\centering\footnotesize
+\caption{Las fronteras de confianza de la Parte~1 y c\'omo se hacen cumplir en lo desplegado.}
+\label{tab:fronteras}
+\begin{tabularx}{\linewidth}{@{}P{3.3cm}Y@{}}
+\toprule
+\thd{Frontera (P1)} & \thd{C\'omo se hace cumplir}\\
+\midrule
+\textbf{F1} Internet $\rightarrow$ borde &
+TLS de Cloud Run (D-04); en el borde, HSTS, CSP y las dem\'as cabeceras,
+cookie \ruta{__Host-} con \code{HttpOnly}, \code{Secure} y
+\code{SameSite=Strict}, rechazo de formularios de otro origen y tama\~no
+m\'aximo de lo que se sube.\\
+\addlinespace
+\textbf{F2} Borde $\rightarrow$ backend &
+El backend no acepta invocaciones an\'onimas: solo la cuenta
+\ruta{verdeazul-edge} puede llamarlo. Adentro valida la sesi\'on (opaca y
+guardada en la base), la forma de cada petici\'on y el token anti-CSRF que
+comprueba el borde.\\
+\addlinespace
+\textbf{F3} Backend $\rightarrow$ base &
+TLS con \code{sslmode=verify-full}, consultas parametrizadas y el rol
+\ruta{app_rw}: no es due\~no de las tablas, no tiene DELETE y solo puede
+actualizar las columnas que cada flujo necesita. PostGIS valida el pol\'igono
+de cada finca.\\
+\addlinespace
+\textbf{F4} Backend $\rightarrow$ motor &
+El motor escucha solo en \ruta{127.0.0.1} dentro del mismo servicio; los
+atributos de cada consulta salen de la base, nunca del cliente; si el motor
+no responde, se niega todo. Pas\'o de frontera de red a frontera de proceso
+(D-06).\\
+\addlinespace
+\textbf{F5} Navegador $\leftrightarrow$ identidad &
+Ya no existe como frontera aparte: sin Keycloak, el inicio de sesi\'on cruza
+F1 y F2 como cualquier otra petici\'on, y el segundo factor y la
+reautenticaci\'on los exige el backend (D-05).\\
+\addlinespace
+\textbf{F6} Backend y transmisor $\rightarrow$ bit\'acora y secretos &
+La bit\'acora es otra instancia de Neon: el transmisor escribe con
+\ruta{log_writer} (solo INSERT) y la API lee con \ruta{log_reader} (solo
+SELECT). Cada evento entra a la bandeja de salida en la misma transacci\'on
+que la operaci\'on y se sella con un HMAC encadenado. Los secretos llegan de
+Secret Manager, a una cuenta de servicio por componente.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\paragraph{Una petici\'on, de punta a punta.} El borde recibe la cookie y
+llama al backend con el token de sesi\'on en una cabecera y su identidad de
+Google en otra. El backend carga la sesi\'on y las zonas vigentes de la
+persona, lee de la base el objeto real que se pide y le pregunta al motor con
+el sujeto, la operaci\'on y los atributos. Si el motor dice que s\'i, ejecuta
+y anota el evento en la bandeja de salida dentro de la misma transacci\'on; si
+dice que no, anota \ruta{ACCESO_DENEGADO} con el motivo y responde 403. Cada
+30~minutos el transmisor copia la bandeja a la bit\'acora y encadena cada
+evento con HMAC; cada lunes copia la bit\'acora entera a Cloud Storage.
+
+% ============================================================================
+% 2. CONTROLES IMPLEMENTADOS                            Responsable: Henry
+% Presupuesto: 2 paginas. Fuente: docs/Informe_P2.md, seccion 2.
+%
+% Pide el enunciado: "Por cada control obligatorio: donde esta en el codigo
+% y como se verifica que funciona." Los obligatorios son los seis de 2.3.
+%
+% La fila 2.3.6 (firma) ya esta escrita: es de Meibel y esta probada en
+% produccion. Las otras cinco salen de la tabla de Informe_P2.md.
+% Ojo con 2.3.4: Informe_P2.md dice que falta HSTS. Confirmar antes de
+% entregar si se agrego o declararlo como pendiente.
+% ============================================================================
+\section{Controles implementados}
+\label{sec:controles}
+
+% Borrador pasado desde docs/Informe_P2.md (seccion 2). Henry: revisar y
+% recortar. HSTS ya esta: lo agrego la rama fix/hsts-opa-y-readmes.
+Los seis controles obligatorios de la secci\'on~2.3 del enunciado est\'an
+implementados en el servidor, y cada uno tiene pruebas autom\'aticas que corren
+en cada \emph{pull request} (\cref{tab:controles}).
+
+\begin{xltabular}{\linewidth}{@{}P{2.7cm}YY@{}}
+\caption{Controles obligatorios: d\'onde est\'an y c\'omo se verifican.}
+\label{tab:controles}\\
+\toprule
+\thd{Control} & \thd{D\'onde est\'a} & \thd{C\'omo se verifica}\\
+\midrule
+\endfirsthead
+\contprev{3}
+\toprule
+\thd{Control} & \thd{D\'onde est\'a} & \thd{C\'omo se verifica}\\
+\midrule
+\endhead
+\midrule
+\contnext{3}
+\endfoot
+\bottomrule
+\endlastfoot
+\textbf{2.3.1} Contrase\~nas con hash lento &
+  \ruta{services/api/app/auth/contrasenas.py}: Argon2id con m~=~19~MiB,
+  t~=~2, p~=~1 y sal por contrase\~na; m\'inimo de 15 caracteres, lista de
+  prohibidas y consulta a filtraciones conocidas (CO-02). &
+  \ruta{tests/identidad/test_unitarias.py}: el hash empieza con
+  \ruta{$argon2id$v=19$m=19456,t=2,p=1$} y la sal cambia en cada hash. \\
+\textbf{2.3.2} Control de acceso en el servidor &
+  Cada endpoint llama a \code{autorizar()}
+  (\ruta{services/api/app/auth/dependencias.py}) antes de tocar la base; el
+  motor en Rego (\ruta{services/policies/rego/}) decide y niega por omisi\'on,
+  tambi\'en si no responde. &
+  977 pruebas de la matriz contra OPA real (\ruta{tests/matriz}) y pruebas
+  por endpoint (\cref{sec:cobertura}). En producci\'on:
+  \cref{fig:ev-denegado}. \\
+\textbf{2.3.3} Secretos fuera del c\'odigo &
+  Secret Manager, inyectados con \ruta{--set-secrets}
+  (\ruta{.github/workflows/desplegar.yml}); \ruta{.env} en \ruta{.gitignore};
+  despliegue con federaci\'on de identidad, sin archivo de credenciales
+  (\cref{sec:secretos}). &
+  Job \emph{Buscar credenciales versionadas}: gitleaks sobre todo el
+  historial en cada \emph{pull request}. En producci\'on:
+  \cref{fig:ev-secretos}. \\
+\textbf{2.3.4} TLS en todo el tr\'afico &
+  Cloud Run solo sirve HTTPS en \ruta{*.run.app}; el borde agrega
+  \code{Strict-Transport-Security}; las conexiones a Neon exigen
+  \code{sslmode=verify-full} (\ruta{config.py} rechaza otra cosa); el borde
+  llama al backend por HTTPS. &
+  \cref{fig:ev-https}; el contenedor no arranca si una cadena de conexi\'on no
+  pide \code{verify-full}. \\
+\textbf{2.3.5} Validaci\'on de entradas &
+  Consultas parametrizadas en todos los m\'odulos; filtros con forma cerrada
+  (patrones en \code{Query}, modelos de Pydantic) y fragmentos de SQL fijos. &
+  Pruebas de 422 con entradas como \code{X' OR '1'='1} y
+  \code{1; DROP TABLE eventos} (\ruta{tests/bitacora}), y en los modelos de
+  enmiendas, asignaciones y consentimientos. \\
+\textbf{2.3.6} Firma digital de certificados &
+  \ruta{certificados/firma.py}: Ed25519 con la llave privada de Secret
+  Manager (\ruta{llave-firma-certificados}). Se firma la forma can\'onica del
+  contenido con un prefijo de dominio; la clave p\'ublica y su huella viajan en
+  el documento. \ruta{verificacion.py} comprueba sin tocar la base y compara la
+  huella con la publicada de Verdeazul. La base no deja modificar lo firmado. &
+  22 pruebas sin base en \ruta{tests/certificados/test_firma.py} (v\'alido,
+  alterado, firmado con otra llave, campos sin firmar) y 41 de punta a punta
+  contra PostGIS y OPA. En producci\'on: \cref{fig:ev-valido}.
+  Huella publicada: \ruta{SHA256:203b7265...df811d}. \\
+\end{xltabular}
+
+% Opcional, si cabe en el presupuesto: controles de P1 que tambien quedaron
+% (TOTP, bloqueo por intentos, datos cifrados, separacion de deberes,
+% revocar el mismo dia, contenedores sin root). Ver la lista en
+% Informe_P2.md, seccion 2. Una linea por control, en una lista.
+\paragraph{Controles de la Parte~1 que tambi\'en quedaron.}
+\begin{itemize}
+  \item Segundo factor TOTP para DG, DC, PA y VF (D-13), y reautenticaci\'on
+    antes de aprobar, emitir, anular, abrir y cerrar per\'iodos, cerrar
+    enmiendas, cambiar cuentas, asignar zonas y autorizar a terceros.
+  \item Bloqueo por intentos (RC-01): espera creciente desde el quinto y
+    30~minutos al d\'ecimo.
+  \item Datos personales cifrados con AES-256-GCM (LG-05) y b\'usqueda por
+    c\'edula con HMAC con llave.
+  \item Separaci\'on de deberes din\'amica: C3, C4, C5 (tres personas por
+    enmienda) y C10, reforzadas en la base.
+  \item Revocar el mismo d\'ia (CU-11): las zonas se leen en cada petici\'on.
+  \item Bit\'acora en otra instancia, con cadena HMAC, comprobaci\'on mensual y
+    copia semanal con retenci\'on de diez a\~nos.
+  \item Contenedores sin root e im\'agenes etiquetadas con su commit, nunca
+    \ruta{latest}.
+\end{itemize}
+
+% ============================================================================
+% 3. GESTION DE SECRETOS                                Responsable: Carlos
+% Presupuesto: 1 pagina. Fuente: docs/Informe_P2.md, seccion 3.
+%
+% Pide el enunciado: "Que secretos existen, donde viven y como llegan al
+% contenedor." Nunca poner un valor real, ni parte de uno.
+% ============================================================================
+\section{Gesti\'on de secretos}
+\label{sec:secretos}
+
+El sistema usa ocho secretos. Viven en Secret Manager, en el proyecto
+\ruta{verdeazul-g4}, y ninguno est\'a en el repositorio: en cada pull request,
+el job \emph{Buscar credenciales versionadas} corre gitleaks sobre todo el
+historial de git, que conserva lo que se borra (\cref{tab:secretos}).
+
+\begin{table}[H]
+\centering\small
+\caption{Secretos en Secret Manager y qui\'en los lee.}
+\label{tab:secretos}
+\begin{tabularx}{\linewidth}{@{}P{5.6cm}YP{2.4cm}@{}}
+\toprule
+\thd{Secreto} & \thd{Qu\'e es} & \thd{Lo lee}\\
+\midrule
+\ruta{verdeazul-db-url} & Cadena de \ruta{app_rw}, base principal & backend\\
+\ruta{verdeazul-bitacora-lectura-url} & Cadena de \ruta{log_reader}, bit\'acora & backend y transmisor\\
+\ruta{llave-busqueda-cedula} & HMAC para buscar por c\'edula & backend\\
+\ruta{llave-cifrado-datos} & AES-256-GCM de los datos personales & backend\\
+\ruta{llave-firma-certificados} & Llave privada Ed25519 & backend\\
+\ruta{verdeazul-outbox-url} & Cadena de \ruta{outbox_rw}, bandeja de salida & transmisor\\
+\ruta{verdeazul-bitacora-escritura-url} & Cadena de \ruta{log_writer}, bit\'acora & transmisor\\
+\ruta{llave-cadena-bitacora} & HMAC de la cadena de la bit\'acora & transmisor\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection*{C\'omo llegan al contenedor}
+
+El despliegue los conecta con \ruta{--set-secrets}, en la forma
+\ruta{VARIABLE=secreto:latest}. La revisi\'on de Cloud Run guarda solo la
+referencia al secreto y lo inyecta como variable de entorno al arrancar el
+contenedor: no est\'an en el Dockerfile ni en la imagen. El
+\ruta{config.py} de cada servicio los envuelve en una clase \code{Secreto} que
+se imprime como \code{<secreto oculto>}, as\'i que un registro o una traza de
+error no muestran el valor. Si en la nube falta uno, o una cadena de
+conexi\'on no pide \code{sslmode=verify-full}, el contenedor no arranca y Cloud
+Run sigue sirviendo la revisi\'on anterior.
+
+\subsection*{Qui\'en puede leer cu\'al}
+
+Cada servicio corre con su propia cuenta de servicio, con el rol
+\ruta{roles/secretmanager.secretAccessor} solo sobre sus secretos: la del
+backend lee cinco, la del transmisor cuatro, y la del borde, el \'unico
+servicio abierto a internet, ninguno. Sin cuentas propias, Cloud Run usar\'ia
+la cuenta por omisi\'on de Compute, que es Editor de todo el proyecto. El
+despliegue tampoco usa una llave: GitHub Actions se autentica con federaci\'on
+de identidad (\emph{Workload Identity Federation}), as\'i que no existe un
+archivo JSON de cuenta de servicio, ni en el repositorio ni en los secretos de
+GitHub.
+
+\subsection*{Riesgos que quedan}
+
+Los registra la desviaci\'on D-03. Las credenciales de base de datos son
+est\'aticas: si una se filtra, sirve hasta que alguien la cambie, mientras que
+OpenBao las renovaba cada 24 horas. Las llaves del HMAC, del cifrado y de la
+firma est\'an en la memoria del proceso que las usa. Y las personas con rol de
+administrador del proyecto de Google Cloud pueden leer los ocho secretos
+(RR-02 de la Parte~1).
+
+% ============================================================================
+% 4. SEGURIDAD HEREDADA DE LA PLATAFORMA                Responsable: Carlos
+% Presupuesto: 1 pagina. Fuente: docs/Informe_P2.md, seccion 4.
+%
+% Pide el enunciado (5.2), para Neon, al menos:
+%   - que protege por defecto (cifrado en reposo y en transito, aislamiento,
+%     respaldos y recuperacion a un punto, autenticacion de la conexion);
+%   - que configuraron (modo de conexion, IP de origen, usuario de la app y
+%     sus permisos, ramas o entornos separados);
+%   - por que esa configuracion y que alternativa descartaron;
+%   - que queda sin cubrir, nombrando las amenazas de la Parte 1.
+% Y la misma linea para Cloud Run. "Media pagina basta": se evalua trazar
+% la frontera, no la extension. Nunca escribir "Neon es seguro" sin decir
+% contra que.
+% ============================================================================
+\section{Seguridad heredada de la plataforma}
+\label{sec:plataforma}
+
+Neon y Cloud Run protegen por su cuenta el transporte, el almacenamiento y la
+infraestructura. El c\'odigo, los permisos y los secretos quedaron de nuestro
+lado, y para cada plataforma se dice contra qu\'e amenazas de la Parte~1
+protege cada lado.
+
+\subsection{Neon}
+
+\begin{table}[H]
+\centering\small
+\caption{Neon: lo que pone la plataforma y lo que pusimos nosotros.}
+\label{tab:neon}
+\begin{tabularx}{\linewidth}{@{}P{3.1cm}Y@{}}
+\toprule
+\thd{Aspecto} & \thd{Detalle}\\
+\midrule
+Lo que protege por defecto &
+Cifrado del almacenamiento en reposo; TLS obligatorio y autenticaci\'on con
+SCRAM en toda conexi\'on; cada proyecto con su propio c\'omputo y
+almacenamiento; recuperaci\'on a cualquier punto de las \'ultimas seis horas;
+el respaldo del almacenamiento lo gestiona el proveedor.\\
+\addlinespace
+Lo que configuramos &
+\textbf{Conexi\'on:} \code{sslmode=verify-full}, exigido en el c\'odigo, que
+adem\'as de cifrar verifica el certificado del servidor.
+\textbf{Entornos:} dos proyectos, \ruta{verdeazul-app} y
+\ruta{verdeazul-bitacora}, para que la bit\'acora sea otra instancia que la
+aplicaci\'on no alcanza (F6).
+\textbf{Usuario de la aplicaci\'on:} \ruta{app_rw}, sin DELETE, sin cambios
+de esquema y con UPDATE solo en las columnas que cada flujo necesita. Cada
+servicio tiene su propio rol, y el due\~no, \ruta{neondb_owner}, no lo usa
+ninguno.
+\textbf{Origen:} sin restringir.\\
+\addlinespace
+Por qu\'e, y qu\'e se descart\'o &
+Dos ramas de un mismo proyecto comparten el usuario due\~no y la cuota; sirven
+para separar entornos de trabajo, y la bit\'acora necesitaba otra instancia con
+sus propias credenciales. La restricci\'on por direcci\'on de origen es
+de plan pago, y Cloud Run no sale a internet por una direcci\'on fija sin un
+conector de pago (D-08).\\
+\addlinespace
+Lo que no cubre (nuestro) &
+Una consulta mal construida, y por eso todas son parametrizadas; un permiso de
+m\'as, y por eso los permisos por columna; una credencial filtrada, que sin
+restricci\'on por origen sirve desde cualquier lugar hasta que se rote (D-03,
+D-08); los diez a\~nos de retenci\'on que pide la Parte~1, con una ventana de
+seis horas (D-07); y un administrador de la cuenta de Neon, que puede borrar
+los proyectos (RR-02).\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+De las amenazas de la Parte~1, la plataforma cubre AE-03, interceptar la
+conexi\'on de un t\'ecnico en una red p\'ublica, con TLS en toda conexi\'on.
+Estas quedaron de nuestro lado:
+
+\begin{itemize}
+  \item \textbf{AI-02}, modificar una medici\'on aprobada sin dejar rastro:
+    \ruta{app_rw} no tiene UPDATE sobre la biomasa, y corregirla exige una
+    enmienda con tres personas.
+  \item \textbf{AI-07}, alterar la bit\'acora: otra instancia donde solo se
+    inserta, un sello HMAC encadenado y una copia semanal que no se puede borrar.
+  \item \textbf{AE-01}, cambiar el n\'umero de finca en una petici\'on (IDOR): el
+    motor decide con los datos del objeto le\'idos de la base, y el n\'umero que
+    manda el cliente solo sirve para buscarlo.
+  \item \textbf{AE-02}, contrase\~nas filtradas: Argon2id, lista de prohibidas,
+    segundo factor y bloqueo por intentos.
+\end{itemize}
+
+\subsection{Cloud Run: responsabilidad compartida}
+
+\begin{table}[H]
+\centering\small
+\caption{Cloud Run: d\'onde est\'a la l\'inea.}
+\label{tab:cloudrun}
+\begin{tabularx}{\linewidth}{@{}YY@{}}
+\toprule
+\thd{Google} & \thd{Nosotros}\\
+\midrule
+La infraestructura y el aislamiento entre contenedores &
+El c\'odigo y sus dependencias, vigiladas por Dependabot\\
+El certificado y la terminaci\'on del TLS &
+Las cabeceras de seguridad del borde: CSP, HSTS y las dem\'as (D-04)\\
+La protecci\'on del frente de red y el escalado &
+Qu\'e es p\'ublico: solo el borde. El backend y el transmisor exigen una
+identidad de Google (F2)\\
+Ejecutar las im\'agenes que se le indican &
+Im\'agenes sin root y con la etiqueta de su commit; cuentas de servicio,
+permisos y secretos (\cref{sec:secretos})\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Lo que P1 le ped\'ia a nginx y Cloud Run no hace: limitar el TLS a la versi\'on
+1.3, porque acepta tambi\'en la 1.2, y un l\'imite de tasa general (D-04).
+
+% ============================================================================
+% 5. DESVIACIONES RESPECTO AL DISENO                     Responsable: Adriel
+% Presupuesto: 0,5 paginas. Fuente: docs/P2_Desviaciones_respecto_P1.md.
+%
+% Pide el enunciado: "Que cambio y por que", y en 4.1: "que cambiaron, por
+% que, y que implicacion de seguridad tuvo". Son 25 (D-01 a D-25): aqui va
+% la tabla resumen y un parrafo de las de mas peso; cada una completa, como
+% registro de decision de arquitectura (ADR), esta en el Anexo A.
+% ============================================================================
+\section{Desviaciones respecto al dise\~no}
+\label{sec:desviaciones}
+
+El modelo de control de acceso no cambi\'o: los ocho roles, los once objetos,
+las once operaciones y las condiciones C1 a C11 se implementaron como se
+dise\~naron. Lo que cambi\'o es con qu\'e se construye. Son 25 desviaciones
+(\cref{tab:desviaciones}); cada una est\'a escrita completa en el
+Anexo~\ref{anx:adr} como un registro de decisi\'on de arquitectura, con su contexto,
+lo que se decidi\'o y sus consecuencias positivas y negativas.
+
+{\footnotesize
+\setlength{\tabcolsep}{4pt}\renewcommand{\arraystretch}{1.05}
+\begin{xltabular}{\linewidth}{@{}P{0.9cm}YP{2.4cm}@{}}
+\caption{Desviaciones respecto a la Parte~1 y su implicaci\'on de seguridad.}
+\label{tab:desviaciones}\\
+\toprule
+\thd{} & \thd{Qu\'e cambi\'o y qu\'e implica} & \thd{Origen}\\
+\midrule
+\endfirsthead
+\contprev{3}
+\toprule
+\thd{} & \thd{Qu\'e cambi\'o y qu\'e implica} & \thd{Origen}\\
+\midrule
+\endhead
+\midrule
+\contnext{3}
+\endfoot
+\bottomrule
+\endlastfoot
+D-01 & Alojamiento en servicios propietarios. Crece RR-02 (el proveedor custodia secretos y datos) & Enunciado \S3.1\\
+D-02 & Docker en vez de Podman. Ning\'un contenedor corre como root & Enunciado \S3.2\\
+D-03 & Secret Manager en vez de OpenBao. Credenciales est\'aticas y llaves en el proceso & Enunciado \S3.1\\
+D-04 & Cloud Run termina el TLS. Se acepta TLS 1.2; no hay l\'imite de tasa general & Enunciado \S3.1\\
+D-05 & Autenticaci\'on propia en vez de Keycloak. Sin llaves de acceso: TOTP no resiste el \emph{phishing} & Decisi\'on del equipo\\
+D-06 & OPA como contenedor adjunto. F4 pasa de frontera de red a frontera de proceso & Cloud Run\\
+D-07 & Continuidad reescrita. Diez a\~nos solo para la bit\'acora; retenci\'on sin bloquear & Plan gratuito de Neon\\
+D-08 & Sin restricci\'on por origen. La credencial es la \'unica barrera de red & Plan gratuito de Neon\\
+D-09 & La verificaci\'on de un certificado no pide sesi\'on. No revela nada ni toca la base & Enunciado \S2.2\\
+D-10 & Firma Ed25519, que P1 no dise\~n\'o. La clave p\'ublica en el documento se compara con la huella publicada & Enunciado \S2.2\\
+D-11 & Las tareas peri\'odicas en un solo servicio. Una falla las detiene todas & Capa gratuita\\
+D-12 & Menos herramientas de an\'alisis. Sin an\'alisis est\'atico ni din\'amico & Tiempo\\
+D-13 & Segundo factor obligatorio solo para DG, DC, PA y VF & Decisi\'on del equipo\\
+D-14 & El aviso de bloqueo (RC-01) va a la bit\'acora y al siguiente ingreso, no por correo & Alcance\\
+D-15 & Las solicitudes de cambio de cuenta tienen due\~no fuera de la matriz; la base impide autoaprobar & Hueco del dise\~no\\
+D-16 & Las cuentas nacen con contrase\~na temporal y cambio obligatorio & Hueco del dise\~no\\
+D-17 & Un per\'iodo se crea abri\'endolo & Hueco del dise\~no\\
+D-18 & El t\'ecnico solo registra mediciones en su zona. Restringe, no ampl\'ia & Refuerzo de la matriz\\
+D-19 & El transmisor corre cada 30 minutos. Un evento tarda hasta media hora en sellarse & Plan gratuito de Neon\\
+D-20 & C9 se ata a la finca y C6 compara interiores de pol\'igonos & Hueco del dise\~no\\
+D-21 & Anular un certificado y autorizar a un tercero piden reautenticaci\'on & Refuerzo de la matriz\\
+D-22 & Un solo per\'iodo abierto a la vez, impuesto en el servidor & Hueco del dise\~no\\
+D-23 & Plantillas del servidor en vez de Angular. CSP estricta, sin npm & Enunciado \S2.1\\
+D-24 & El reporte semanal de HBAC-02 queda fuera; los datos est\'an en la bit\'acora & Alcance\\
+D-25 & Las exportaciones del auditor son CSV en la misma aplicaci\'on, con C7 & Alcance\\
+\end{xltabular}
+}
+
+\paragraph{Las de m\'as peso.} Tres desviaciones bajan una garant\'ia que la
+Parte~1 promet\'ia, y conviene decirlo sin rodeos. \textbf{D-03}: sin OpenBao,
+la contrase\~na de la base es est\'atica (si se filtra, sirve hasta que se
+rote) y las llaves del HMAC, del cifrado y de la firma est\'an en la memoria del
+proceso que las usa; quien controle el transmisor podr\'ia reescribir la cadena
+de la bit\'acora. Lo acotan la instancia separada donde solo se inserta, la
+comprobaci\'on de la cadena y la copia semanal que ya no se puede tocar.
+\textbf{D-05}: la autenticaci\'on es c\'odigo nuestro y se pierden las llaves
+de acceso, que eran la defensa resistente al \emph{phishing} contra AE-02; la
+reemplazan TOTP en los cuatro roles que aprueban, emiten o cambian permisos,
+la consulta a filtraciones de CO-02 y el bloqueo de RC-01. \textbf{D-07}: la
+base principal solo se puede restaurar seis horas atr\'as; la retenci\'on de
+diez a\~nos (BI-04, LG-06) se cumple para la bit\'acora, que guarda toda la
+historia de qu\'e pas\'o con cada certificado, y con una retenci\'on que un
+administrador del proyecto todav\'ia podr\'ia quitar (RR-02).
+
+% ============================================================================
+% 6. COBERTURA DE LA MATRIZ                             Responsable: Ludwin
+% Presupuesto: 2 paginas. Fuente: docs/Informe_P2.md, seccion 6.
+%
+% Pide el enunciado: "Tabla que muestre, permiso por permiso, donde esta
+% implementado y como se comprobo." Y en la evaluacion: "Permisos de la
+% matriz sin implementar: se descuenta proporcionalmente".
+%
+% La tabla de Informe_P2.md ya esta completa (O1 a O11). Las filas de O5 y
+% O7 ya estan escritas abajo. Si no cabe en dos paginas: \footnotesize, o
+% quitar la columna de prueba y poner una sola linea por objeto.
+% ============================================================================
+\section{Cobertura de la matriz}
+\label{sec:cobertura}
+
+% Borrador pasado desde docs/Informe_P2.md (seccion 6). Ludwin: revisar los
+% numeros contra tests/matriz y recortar si no cabe.
+La matriz tiene 88 celdas (8 roles $\times$ 11 objetos). Entre sus pares de rol
+y operaci\'on hay 84 permisos concedidos, 37 de ellos con una de las
+condiciones C1 a C11, y 884 pares negados por omisi\'on. \textbf{Todos} est\'an
+probados en el motor por \ruta{tests/matriz/test_celdas.py}: 977 pruebas
+contra un OPA real en cada \emph{pull request}. La \cref{tab:cobertura} dice
+adem\'as d\'onde vive cada permiso y qu\'e prueba lo ejercita de punta a punta,
+contra PostgreSQL y OPA.
+
+{\footnotesize
+\begin{xltabular}{\linewidth}{@{}P{1.9cm}P{0.6cm}P{3.4cm}YP{3.0cm}@{}}
+\caption{Cobertura de la matriz, permiso por permiso. Entre par\'entesis, la
+condici\'on de la Parte~1.}
+\label{tab:cobertura}\\
+\toprule
+\thd{Objeto} & \thd{Op.} & \thd{Roles (condici\'on)} & \thd{Endpoint} & \thd{Prueba}\\
+\midrule
+\endfirsthead
+\contprev{5}
+\toprule
+\thd{Objeto} & \thd{Op.} & \thd{Roles (condici\'on)} & \thd{Endpoint} & \thd{Prueba}\\
+\midrule
+\endhead
+\midrule
+\contnext{5}
+\endfoot
+\bottomrule
+\endlastfoot
+O1 Fincas & L & DG, DC, PA; TC, VF (C1); AE (C7); DF (C8) & \ruta{GET /fincas}, \ruta{/fincas/{id}} & \ruta{test_fincas.py}\\
+ & C, M & PA & \ruta{POST /fincas}, \ruta{PATCH /fincas/{id}} & \textit{idem}\\
+\addlinespace
+O2 Per\'iodos & L & DG, DC, TC, VF, DF; AE (C7) & \ruta{GET /periodos}, \ruta{/periodos/{id}} & \ruta{test_periodos.py}\\
+ & Ab & DC & \ruta{POST /periodos}, \ruta{/periodos/{id}/abrir} (D-17, D-22) & \textit{idem}\\
+ & Cr & DC & \ruta{POST /periodos/{id}/cerrar} & \textit{idem}\\
+\addlinespace
+O3 Mediciones & L & DG, DC, VF; TC (C1); AE (C7); DF (C8) & \ruta{GET /mediciones}, \ruta{/mediciones/{id}} & \ruta{test_mediciones.py}\\
+ & C & TC (C2, y C1 por D-18); VF (C1 $\wedge$ C2) & \ruta{POST /mediciones} & \textit{idem}\\
+ & A, D & VF (C3) & \ruta{POST /mediciones/{id}/aprobar}, \ruta{/devolver} & \textit{idem}\\
+ & X & AE (C7) & \ruta{GET /mediciones/exportar} & \textit{idem}\\
+\addlinespace
+O4 Enmiendas & L & DG, DC, VF; TC (C1); AE (C7); DF (C8) & \ruta{GET /enmiendas}, \ruta{/enmiendas/{id}} & \ruta{test_enmiendas.py}\\
+ & C & TC (C11) & \ruta{POST /enmiendas} & \textit{idem}\\
+ & A, D & VF (C4) & \ruta{POST /enmiendas/{id}/aprobar}, \ruta{/devolver} & \textit{idem}\\
+ & Cr & DC (C5) & \ruta{POST /enmiendas/{id}/cerrar} & \textit{idem}\\
+ & X & AE (C7) & \ruta{GET /enmiendas/exportar} & \textit{idem}\\
+\addlinespace
+O5 Certificados & L & DG, DC, VF; AE (C7); DF (C8); TA (C9, atada a la finca, D-20) & \ruta{GET /certificados}, \ruta{/certificados/{id}} & \ruta{test_certificados.py}\\
+ & Em & VF (C6) & \ruta{POST /certificados/{medicion}/emitir} & \textit{idem}\\
+ & An & DC & \ruta{POST /certificados/{id}/anular} & \textit{idem}\\
+ & X & AE (C7) & \ruta{GET /certificados/exportar} & \textit{idem}\\
+\addlinespace
+O6 Datos personales & L & DG, PA; DF (C8) & \ruta{GET /personas}, \ruta{/personas/{id}} & \ruta{test_flujos.py}\\
+ & C, M & PA & \ruta{POST /personas}, \ruta{PATCH /personas/{id}} & \textit{idem}\\
+\addlinespace
+O7 Consenti\-mientos & L & DG, PA; DF (C8) & \ruta{GET /consentimientos}, \ruta{/{id}} & \ruta{test_consentimientos.py}\\
+ & C & PA; DF (C8) & \ruta{POST /consentimientos} & \textit{idem}\\
+ & M & DF (C8) & \ruta{PATCH /consentimientos/{id}} & \textit{idem}\\
+\addlinespace
+O8 Asignaciones & L & DG, DC; TC, VF (C1) & \ruta{GET /asignaciones}, \ruta{/asignaciones/{id}} & \ruta{test_asignaciones.py}\\
+ & C, M & DC & \ruta{POST /asignaciones}, \ruta{PATCH /asignaciones/{id}} & \textit{idem}\\
+\addlinespace
+O9 Cuentas & L & DG; PA (C10) & \ruta{GET /cuentas} & \ruta{test_flujos.py}\\
+ & C, M & PA (C10) & \ruta{POST /cuentas}, \ruta{PATCH /cuentas/{id}} y las solicitudes (D-15) & \textit{idem}\\
+\addlinespace
+O10 Credencial propia & M & los ocho roles & \ruta{PATCH /credenciales} & \ruta{test_flujos.py}\\
+\addlinespace
+O11 Bit\'acora & L & DG, DC, PA; AE (C7) & \ruta{GET /bitacora} & \ruta{test_bitacora.py}\\
+ & X & DG, DC; AE (C7) & \ruta{GET /bitacora/exportar} & \textit{idem}\\
+\end{xltabular}
+}
+
+Nadie tiene E (eliminar) sobre ning\'un objeto, y no existe ninguna ruta
+DELETE. O10 no tiene L a prop\'osito: las credenciales se cambian y no se
+consultan, as\'i que no existe \ruta{GET /credenciales}. Adem\'as de las
+pruebas, cada objeto se ejercit\'o a mano en el sistema desplegado con las
+cuentas de prueba, y los intentos negados aparecen en la propia bit\'acora
+(\cref{fig:ev-denegado}).
+
+% ============================================================================
+% 7. EVIDENCIA                                          Responsable: Meibel
+% Pide el enunciado: "Capturas de: el sistema funcionando por HTTPS, la
+% configuracion de Secret Manager, Dependabot activo, un certificado
+% verificado correctamente y el intento fallido de un rol al hacer algo que
+% no le corresponde." Son las cinco de abajo (E1 a E5).
+%
+% Imagenes en img/: ev1-https.png, ev2-secret-manager.png, ev3-dependabot.png,
+% ev4-certificado-valido.png, ev5-acceso-denegado.png
+% Si el informe pasa de 10 paginas, bajar \anchoevidencia a 0.75\linewidth.
+% ============================================================================
+\section{Evidencia}
+\label{sec:evidencia}
+
+Las capturas se tomaron sobre el sistema desplegado en \url{\urlSistema}, desde una red distinta a la del equipo de desarrollo.
+
+% Ancho de cada captura sola, y de cada una de un par
+\newcommand{\anchoevidencia}{0.5\linewidth}
+\newcommand{\anchopar}{0.29\linewidth}
+
+% \evidencia{archivo}{etiqueta}{titulo}{descripcion}
+% Titulo, descripcion e imagen van juntos, sin partirse entre paginas.
+\newcommand{\evidencia}[4]{%
+  \par\addvspace{0.6em}
+  \noindent\begin{minipage}{\linewidth}
+    {\large\bfseries\color{tecnavy} #3\par}
+    \smallskip
+    #4\par
+    \medskip
+    \centering
+    \safeimage[width=\anchoevidencia]{#1}
+    \captionof{figure}{#3}
+    \label{#2}
+  \end{minipage}\par}
+
+% \evidenciapar{archivo1}{etiqueta1}{titulo1}{descripcion1}{archivo2}{etiqueta2}{titulo2}{descripcion2}
+% Dos evidencias distintas lado a lado, cada una con su titulo, su texto, su
+% captura y su propio numero de figura (asi \cref sigue apuntando a cada una).
+\newcommand{\evidenciapar}[8]{%
+  \par\addvspace{0.6em}
+  \noindent\begin{minipage}[t]{0.485\linewidth}
+    {\normalsize\bfseries\color{tecnavy} #3\par}
+    \smallskip
+    {\small #4\par}
+    \medskip
+    \centering
+    \safeimage[width=\linewidth]{#1}
+    \captionof{figure}{#3}
+    \label{#2}
+  \end{minipage}\hfill
+  \begin{minipage}[t]{0.485\linewidth}
+    {\normalsize\bfseries\color{tecnavy} #7\par}
+    \smallskip
+    {\small #8\par}
+    \medskip
+    \centering
+    \safeimage[width=\linewidth]{#5}
+    \captionof{figure}{#7}
+    \label{#6}
+  \end{minipage}\par}
+
+% \evidenciados{etiqueta}{titulo}{descripcion}{archivo1}{pie1}{archivo2}{pie2}
+% Una evidencia con dos capturas lado a lado, (a) a la izquierda y (b) a la
+% derecha.
+\newcommand{\evidenciados}[7]{%
+  \par\addvspace{0.6em}
+  \noindent\begin{minipage}{\linewidth}
+    \captionsetup{type=figure}% para que las subfiguras funcionen aqui
+    {\large\bfseries\color{tecnavy} #2\par}
+    \smallskip
+    #3\par
+    \medskip
+    \centering
+    \begin{subfigure}[t]{\anchopar}
+      \centering
+      \safeimage[width=\linewidth]{#4}
+      \caption{#5}
+      \label{#1-a}
+    \end{subfigure}\hspace{0.02\linewidth}
+    \begin{subfigure}[t]{\anchopar}
+      \centering
+      \safeimage[width=\linewidth]{#6}
+      \caption{#7}
+      \label{#1-b}
+    \end{subfigure}
+    \caption{#2}
+    \label{#1}
+  \end{minipage}\par}
+
+
+% \evidenciatres{etiqueta}{titulo}{descripcion}{archivo1}{pie1}{archivo2}{pie2}{archivo3}{pie3}
+% Tres capturas: (a) y (b) lado a lado, y (c) debajo, a lo ancho (es la
+% bitacora, que es una captura ancha).
+\newcommand{\evidenciatres}[9]{%
+  \par\addvspace{0.6em}
+  \noindent\begin{minipage}{\linewidth}
+    \captionsetup{type=figure}% para que las subfiguras funcionen aqui
+    {\large\bfseries\color{tecnavy} #2\par}
+    \smallskip
+    #3\par
+    \medskip
+    \centering
+    \begin{subfigure}[t]{\anchopar}
+      \centering
+      \safeimage[width=\linewidth]{#4}
+      \caption{#5}
+      \label{#1-a}
+    \end{subfigure}\hspace{0.02\linewidth}
+    \begin{subfigure}[t]{\anchopar}
+      \centering
+      \safeimage[width=\linewidth]{#6}
+      \caption{#7}
+      \label{#1-b}
+    \end{subfigure}\hspace{0.02\linewidth}
+    \begin{subfigure}[t]{0.38\linewidth}
+      \centering
+      \safeimage[width=\linewidth]{#8}
+      \caption{#9}
+      \label{#1-c}
+    \end{subfigure}
+    \caption{#2}
+    \label{#1}
+  \end{minipage}\par}
+
+
+\evidenciapar
+{ev1-https.png}{fig:ev-https}{E1. El sistema funcionando por HTTPS}{%
+El sistema abre desde internet en su direcci\'on p\'ublica de Cloud Run. El
+candado y el detalle del certificado muestran que la conexi\'on va cifrada
+con TLS, con un certificado emitido para el dominio del servicio. Es el
+\'unico servicio expuesto: el backend y el transmisor no tienen URL abierta.}
+{ev2-secret-manager.png}{fig:ev-secretos}{E2. La configuraci\'on de Secret Manager}{%
+Los secretos del sistema (cadenas de conexi\'on a Neon, llaves de cifrado y
+de firma) viven en Secret Manager del proyecto \code{verdeazul-g4}, no en el
+c\'odigo ni en el repositorio. Cada servicio los recibe al arrancar y solo
+lee los suyos. La captura muestra la lista sin abrir ning\'un valor.}
+
+% E3 y E4 en un mismo bloque: E3 a la izquierda con sus dos capturas una
+% sobre la otra, E4 a la derecha. Cada una conserva su numero de figura.
+\par\addvspace{0.6em}
+\noindent\begin{minipage}[t]{0.485\linewidth}
+  \captionsetup{type=figure}
+  {\normalsize\bfseries\color{tecnavy} E3. Dependabot activo\par}
+  \smallskip
+  {\small Dependabot revisa las dependencias de Python, las im\'agenes de
+  Docker y las acciones de GitHub, y abre un \emph{pull request} por cada
+  versi\'on nueva o vulnerabilidad conocida, que pasa por el mismo CI. Ya
+  encontr\'o una real, CVE-2025-62727 en Starlette, que se atendi\'o y se
+  document\'o en \ruta{docs/Dependabot.md}.\par}
+  \medskip
+  \begin{subfigure}{\linewidth}
+    \centering
+    \safeimage[width=\linewidth]{ev3-dependabot-alertas.jpg}
+    \caption{Alertas de Dependabot activas}
+    \label{fig:ev-dependabot-a}
+  \end{subfigure}
+
+  \smallskip
+  \begin{subfigure}{\linewidth}
+    \centering
+    \safeimage[width=0.8\linewidth]{ev3-dependabot-prs.png}
+    \caption{\emph{Pull requests} abiertos por Dependabot}
+    \label{fig:ev-dependabot-b}
+  \end{subfigure}
+  \caption{E3. Dependabot activo}
+  \label{fig:ev-dependabot}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.485\linewidth}
+  {\normalsize\bfseries\color{tecnavy} E4. Un certificado verificado correctamente\par}
+  \smallskip
+  {\small El verificador \code{vf2} emiti\'o y firm\'o el certificado de la
+  medici\'on~1, \code{df1} (el due\~no de la finca) lo descarg\'o, y la
+  p\'agina p\'ublica de verificaci\'on lo comprob\'o sin iniciar sesi\'on. La
+  firma Ed25519 coincide con el contenido, y la huella de la llave que firm\'o
+  es la publicada por Verdeazul.\par}
+  \medskip
+  \centering
+  \safeimage[width=\linewidth]{ev4-certificado-valido.png}
+  \captionof{figure}{E4. Un certificado verificado correctamente}
+  \label{fig:ev-valido}
+\end{minipage}\par
+
+\evidenciatres{fig:ev-denegado}{E5. Intento fallido de un rol}{%
+Cada rol solo ve en pantalla lo que la matriz le concede. El técnico de campo tc1 ingresa y escribe a mano una direcci\'on que no le corresponde (certificados), el servidor consulta el motor de pol\'iticas, responde \enquote{Acceso denegado} y registra el intento en la bit\'acora.}
+{ev5-panel-tc1.png}{Panel del técnico 1}
+{ev5-acceso-denegado.png}{Acceso denegado}
+{ev5-bitacora.png}{Bitácora}
+
+% ============================================================================
+% ANEXO A. REGISTRO DE DECISIONES DE ARQUITECTURA      Responsable: Adriel
+% Reemplaza a docs/P2_Desviaciones_respecto_P1.md (ADR de Ludwin, revisados
+% contra la Parte 1). Queda fuera del conteo de 6 a 10 paginas: es el detalle
+% que la seccion 5 resume.
+% ============================================================================
+\clearpage
+\appendix
+\crefname{section}{anexo}{anexos}
+\Crefname{section}{Anexo}{Anexos}
+\section{Registro de decisiones de arquitectura}
+\label{anx:adr}
+
+El diseño de octubre asumía servidores propios y una restricción de la
+cliente: solo software libre. La Parte~2 impone una plataforma concreta
+(Cloud Run, Neon, Secret Manager y Artifact Registry, con imágenes de Docker),
+y casi todas las desviaciones salen de ese cambio de supuesto. Cada una va
+como registro de decisión de arquitectura (ADR): el contexto, lo que se
+decidió y sus consecuencias. El identificador D-XX es el que usan el código
+y los demás documentos del repositorio.
+
+% \adr{numero}{titulo}: encabezado de un ADR, fuera del indice.
+\newcommand{\adr}[2]{\subsection*{ADR #1. #2}}
+\newcommand{\adrctx}{\textbf{Contexto.}\ }
+\newcommand{\adrdec}{\par\smallskip\textbf{Decisión.}\ }
+\newcommand{\adrpos}{\par\smallskip\textbf{Consecuencias positivas.}}
+\newcommand{\adrneg}{\par\smallskip\textbf{Consecuencias negativas.}}
+
+\adr{001 (D-01)}{La plataforma de alojamiento es software propietario}
+\adrctx El Informe de políticas recoge una restricción explícita de la cliente:
+presupuesto solo para software libre (requerimiento R11, regla LG-08). La
+Parte~2 impone Cloud Run, Neon, Secret Manager y Artifact Registry, que son
+servicios propietarios.
+\adrdec El sistema se aloja en esos servicios. Todo el software que escribimos y
+sus dependencias siguen siendo libres (Python, FastAPI, PostgreSQL, PostGIS,
+OPA); lo propietario es solo dónde se ejecuta.
+\adrpos
+\begin{itemize}
+  \item Los cuatro servicios tienen capa gratuita suficiente: se respeta la
+    restricción de presupuesto, aunque no la de licencia.
+  \item Siguen aplicando las mitigaciones de P1 para el riesgo del proveedor:
+    los datos personales se cifran en la aplicación y la base guarda texto
+    cifrado.
+\end{itemize}
+\adrneg
+\begin{itemize}
+  \item Crece RR-02 de P1 (el proveedor o una cuenta de administración de la
+    nube comprometida accede a los datos): ahora el proveedor también custodia
+    los secretos y ejecuta el motor de base de datos.
+  \item R11 y LG-08 no se cumplen en la capa de alojamiento.
+\end{itemize}
+
+\adr{002 (D-02)}{Docker en lugar de Podman sin privilegios}
+\adrctx La arquitectura eligió Podman y descartó Docker Engine porque su
+servicio central corre como administrador. La Parte~2 exige imágenes de
+Docker en Artifact Registry.
+\adrdec Las imágenes se construyen con Docker. Cada Dockerfile declara un
+usuario sin privilegios (\code{USER 10001:10001} en api, edge y transmisor;
+\code{USER 1000:1000} en el motor de políticas), así que ningún contenedor
+corre como root.
+\adrpos
+\begin{itemize}
+  \item El demonio de Docker existe solo donde se construye la imagen, en los
+    \emph{runners} de GitHub Actions. En producción ejecuta Cloud Run, que no
+    usa Docker y aísla cada instancia.
+  \item Se conserva el mínimo privilegio en la ejecución.
+\end{itemize}
+\adrneg
+\begin{itemize}
+  \item La construcción depende de un demonio con privilegios de
+    administrador, aunque sea en una máquina efímera de la integración
+    continua.
+\end{itemize}
+
+\adr{003 (D-03)}{Secret Manager en lugar de OpenBao}
+\adrctx P1 había descartado los gestores de secretos de los proveedores de nube
+por crear dependencia, y la Parte~2 los impone. OpenBao hacía tres cosas que
+Secret Manager no hace: generaba credenciales de base de datos de vida
+limitada, firmaba cada eslabón de la bitácora con su motor Transit sin que la
+llave saliera de él, y cifraba los datos personales sin entregarle la llave a
+nadie.
+\adrdec Los secretos viven en Secret Manager y se inyectan como variables de
+entorno; cada servicio tiene su propia cuenta y solo lee lo suyo. Las tres
+funciones de OpenBao pasan a la aplicación: una contraseña de Neon guardada
+como secreto, con rotación manual; el HMAC de la bitácora calculado en el
+proceso del transmisor; y el cifrado de cédula y teléfono (LG-05) en el
+proceso del backend, con la búsqueda por cédula sobre un valor derivado.
+\adrpos
+\begin{itemize}
+  \item Ninguna credencial vive en el repositorio ni en las imágenes, y cada
+    servicio solo lee lo suyo.
+  \item Los cambios de configuración y de permisos sobre los secretos quedan
+    en los registros de auditoría de administración de Google Cloud, activos
+    por defecto.
+  \item El rol de la aplicación no es dueño de las tablas ni puede alterar el
+    esquema, y la bitácora vive en otra instancia donde el transmisor solo
+    inserta.
+  \item La tarea \ruta{volcado} (ADR 007) sube cada semana la bitácora completa,
+    con el eslabón de cada evento, a un depósito donde nada se puede borrar ni
+    reemplazar en diez años. Si alguien con la llave reescribiera la cadena en
+    Neon, dejaría de coincidir con las copias anteriores, que ya no puede
+    tocar. La tarea \ruta{cadena} la recalcula y deja constancia en la propia
+    bitácora.
+  \item Desaparece RR-05 de P1 (el nodo único de OpenBao): ese riesgo pasa a
+    ser parte de RR-02.
+\end{itemize}
+\adrneg
+\begin{itemize}
+  \item Si la credencial de la base se filtra, sirve hasta que alguien la
+    cambie. Con OpenBao caducaba en 24 horas.
+  \item Quien comprometa el proceso del transmisor puede reescribir la cadena
+    en Neon. La garantía baja de «nadie con acceso a la base puede falsificar
+    el historial» a «nadie con acceso a la base, pero sí quien controle el
+    transmisor»; las copias semanales anteriores siguen intactas.
+  \item Las llaves de los datos personales y de la firma están en la memoria
+    del proceso, no encerradas en un motor que solo responde operaciones.
+  \item Las \emph{lecturas} de un secreto no quedan registradas: el registro
+    de acceso a datos de Google Cloud viene apagado y no se activó.
+  \item El sistema queda atado al proveedor, que era lo que P1 quería evitar.
+\end{itemize}
+
+\adr{004 (D-04)}{Cloud Run termina el TLS}
+\adrctx La arquitectura ponía nginx como única entrada, a cargo de terminar
+TLS~1.3, limitar tamaño y tasa y agregar las cabeceras de seguridad. Cloud
+Run asigna un dominio con TLS automático y termina la conexión antes del
+contenedor.
+\adrdec F1 la aplica Google. Las cabeceras (CSP, \code{X-Frame-Options},
+\code{X-Content-Type-Options}, \code{Referrer-Policy},
+\code{Permissions-Policy} y \code{Strict-Transport-Security}) y los límites
+de tamaño pasan al servicio de borde. F2 se implementa con los permisos de
+Cloud Run: el backend no acepta invocaciones anónimas y solo la cuenta del
+borde puede llamarlo.
+\adrpos
+\begin{itemize}
+  \item No hay certificados que gestionar ni renovar.
+  \item F2 es más fuerte que la red privada diseñada: quien conozca la URL del
+    backend recibe un rechazo antes de que se ejecute nuestro código.
+\end{itemize}
+\adrneg
+\begin{itemize}
+  \item La versión de TLS y los cifrados quedan fuera de nuestro control:
+    Cloud Run acepta TLS~1.2 y 1.3, y P1 exigía solo 1.3.
+  \item No se reimplementó el límite de tasa general de nginx. Solo la
+    verificación pública tiene uno (ADR 009), y el inicio de sesión queda
+    acotado por el bloqueo de RC-01.
+\end{itemize}
+
+\adr{005 (D-05)}{Autenticación propia en lugar de Keycloak}
+\adrctx P1 eligió Keycloak como único emisor de identidades y advirtió, con
+razón, que escribir la autenticación uno mismo es un error frecuente. Pero
+Keycloak necesita su propia base, arranca lento, consume memoria y expone una
+consola de administración: desproporcionado para un servicio que escala a
+cero en una capa gratuita.
+\adrdec La autenticación pasa al backend, con Argon2id y los parámetros de
+P1 (variante id, sal por usuario, 19~MiB, dos iteraciones, un hilo). Se
+conserva el diseño de sesión de P1: cookie opaca \code{HttpOnly},
+\code{Secure} y \code{SameSite}, sesión en la base, revocación inmediata al
+dar de baja o cambiar de rol, e identificador nuevo en cada ingreso. CO-01 a
+CO-05 y el bloqueo de RC-01 viven en la aplicación. El segundo factor es TOTP
+(ADR 013), con reautenticación en las acciones críticas.
+\adrpos
+\begin{itemize}
+  \item Un componente menos que operar y ninguna consola de administración
+    expuesta.
+  \item Se conserva lo valioso del diseño, que era la sesión.
+\end{itemize}
+\adrneg
+\begin{itemize}
+  \item Se pierden las llaves de acceso, que P1 exigía para las direcciones,
+    el personal administrativo y los verificadores; implementar WebAuthn bien
+    no cabía en el tiempo. Con ellas se pierde la resistencia al
+    \emph{phishing}: un código TOTP se puede capturar con un sitio falso en
+    tiempo real.
+  \item AE-02 (contraseñas filtradas o robadas) queda cubierta por TOTP en los
+    cuatro roles que aprueban, emiten o cambian permisos, por CO-02 (lista de
+    prohibidas y consulta a filtraciones conocidas) y por el bloqueo de RC-01,
+    pero no por un factor resistente al \emph{phishing}.
+  \item El código de autenticación es nuestro, que es el riesgo que P1
+    advertía. Lo acotan sus pruebas en \ruta{tests/identidad}.
+\end{itemize}
+
+\adr{006 (D-06)}{OPA como contenedor adjunto}
+\adrctx El motor de políticas era un componente aparte que solo aceptaba
+consultas desde la red privada (F4). Cloud Run no ofrece red privada entre
+servicios sin configuración de red que la capa gratuita no cubre bien.
+\adrdec OPA corre como contenedor adjunto dentro del mismo servicio que el
+backend, escuchando solo en la interfaz local. Las políticas van dentro de su
+imagen y llevan la misma etiqueta de versión.
+\adrpos
+\begin{itemize}
+  \item Se conserva la separación entre el punto de aplicación y el de
+    decisión: las políticas siguen siendo código en Rego, versionado y con
+    pruebas propias, y el backend no puede conceder lo que el motor niega.
+  \item Se sabe qué reglas están corriendo, por la etiqueta de la imagen.
+\end{itemize}
+\adrneg
+\begin{itemize}
+  \item F4 deja de ser frontera de red y pasa a ser de proceso: quien
+    comprometa el contenedor del backend está en la misma instancia que el
+    motor.
+\end{itemize}
+
+\adr{007 (D-07)}{Las reglas de continuidad se reescriben}
+\adrctx DI-01 a DI-04 prometían recuperación en dos horas, respaldos cada hora,
+regla 3-2-1 con una copia aislada imborrable y pérdida máxima de una hora,
+para dos máquinas propias con réplica en espera. Neon en plan gratuito
+restaura a cualquier punto de las últimas seis horas, y las instantáneas
+programadas son de pago. Seis horas no sirven para BI-04 ni para LG-06, que
+exigen diez años para lo ligado a un certificado.
+\adrdec DI-01 y DI-04 se cubren con la restauración de Neon. La retención la
+resuelve la tarea \ruta{volcado}, que cada lunes copia la \textbf{bitácora}
+a un depósito de Cloud Storage con retención de diez años: nada se borra ni
+se reemplaza antes, y la cuenta del transmisor solo puede crear objetos. La
+copia lleva el eslabón de cada evento y un manifiesto con su SHA-256.
+\adrpos
+\begin{itemize}
+  \item La restauración de Neon cumple DI-04 con margen y DI-01, porque
+    restaurar es inmediato.
+  \item El volcado recupera la copia separada de la bitácora de BI-03, su
+    retención de diez años (BI-04, LG-06) y, para la bitácora, la copia fuera
+    de la cuenta de Neon (DI-02) que no se puede borrar (DI-03). Se verifica
+    sin acceso a Neon, con el archivo y la llave.
+\end{itemize}
+\adrneg
+\begin{itemize}
+  \item \textbf{Solo la bitácora.} Copiar la base principal exigía un rol con
+    lectura de todo el esquema, incluidos los datos personales cifrados. Lo
+    que exige diez años es la trazabilidad, y esa está entera en la bitácora.
+    Si la base principal se perdiera más allá de seis horas, los datos
+    vigentes habría que reconstruirlos, pero no se pierde la historia de qué
+    pasó con ellos. DI-02 y DI-03 se cumplen para la bitácora y no para la
+    base principal.
+  \item \textbf{La retención no está bloqueada.} Bloquearla es irreversible:
+    el depósito no se podría borrar en diez años y Google le pondría un
+    gravamen al proyecto. Un administrador del proyecto podría quitar la
+    política y borrar las copias (RR-02). En producción se cierra con
+    \code{-{}-lock-retention-period}.
+  \item Se pierden la réplica en espera y el ensayo semestral de recuperación;
+    la disponibilidad deja de estar bajo nuestro control, y crece RR-04.
+\end{itemize}
+
+\adr{008 (D-08)}{Sin restricción por dirección de origen}
+\adrctx La lista de direcciones permitidas y el acceso por red privada son de
+plan pago en Neon. Además, Cloud Run no sale a internet por una dirección
+estable sin configurar salida a una red virtual y traducción de direcciones.
+\adrdec La base acepta conexiones desde cualquier lugar, y la barrera es la
+credencial.
+\adrpos
+\begin{itemize}
+  \item Neon exige TLS y autentica con SCRAM, y la aplicación exige además
+    \code{sslmode=verify-full}: la credencial no se puede capturar en tránsito
+    y se verifica que el servidor sea el de Neon.
+\end{itemize}
+\adrneg
+\begin{itemize}
+  \item No hay segunda línea de defensa en la red: todo recae en que la
+    credencial no se filtre. Eso sube la importancia de que nada se versione
+    (gitleaks en cada pull request) y de que cada rol tenga el mínimo
+    privilegio.
+\end{itemize}
+
+\adr{009 (D-09)}{La verificación de un certificado no exige sesión}
+\adrctx El diseño sostenía la mediación completa: nada salta el punto de
+aplicación. El enunciado pide que cualquiera pueda comprobar un certificado
+sin acceso al sistema, porque un certificado circula fuera de Verdeazul y
+vale dinero.
+\adrdec La verificación es pública. No consulta la base: recibe el archivo,
+comprueba la firma con la clave pública que trae y compara su huella con la
+de Verdeazul (ADR 010). La acotan un tamaño máximo de 64~KB (en el borde y en
+el backend), un límite de 10 verificaciones por minuto por origen en el
+borde, y una respuesta que solo dice si es válido y las dos huellas. La
+huella de la llave de producción es
+\ruta{SHA256:203b7265f5b57cbe0aed5ef62cb74a56e2731c5185675e8742203dfbd3df811d}.
+\adrpos
+\begin{itemize}
+  \item No hay objeto protegido en juego: la verificación no revela nada.
+  \item Un tercero puede confiar sin acceso al sistema. Comprobado en
+    producción el 17 de noviembre: un certificado firmado con otra llave tiene
+    firma válida y aun así se rechaza, porque su huella es otra.
+\end{itemize}
+\adrneg
+\begin{itemize}
+  \item El límite de tasa vive en la memoria de cada instancia del borde; con
+    varias, se multiplica. En una operación real iría en un almacén compartido.
+  \item Una verificación válida no dice si el certificado se anuló después,
+    porque un anulado conserva su firma. Eso se le pregunta a Verdeazul.
+\end{itemize}
+
+\adr{010 (D-10)}{Firma digital de certificados}
+\adrctx P1 no lo diseñó: la Ley 8454 aparecía en el marco regulatorio, pero sin
+formato, llave ni procedimiento de verificación. El enunciado lo exige.
+\adrdec Cada certificado se emite firmado con Ed25519. La clave privada es un
+secreto de Secret Manager que solo lee el backend desplegado; la pública viaja
+en el documento. El evento de emisión en la bitácora lleva la huella de la
+clave, un campo nuevo respecto a la Tabla 4.2 de P1.
+\adrpos
+\begin{itemize}
+  \item Cualquiera comprueba que el contenido no cambió desde que se firmó.
+  \item Nadie del equipo necesita la llave de producción: en local se firma
+    con una llave de prueba.
+\end{itemize}
+\adrneg
+\begin{itemize}
+  \item La llave privada está en la memoria del backend (ADR 003), no en un
+    módulo que solo firme.
+  \item La clave pública dentro del documento prueba que el contenido no
+    cambió, pero no quién firmó: cualquiera puede generar un par y firmar un
+    certificado falso que verifica igual. Se cierra publicando la huella de la
+    clave de Verdeazul por un canal independiente. La verificación pública la
+    compara sola; quien use herramientas propias, a mano.
+\end{itemize}
+
+\adr{011 (D-11)}{Los trabajos programados se consolidan en un solo servicio}
+\adrctx P1 preveía varios procesos periódicos: el transmisor, la desactivación
+de lo vencido (HBAC-03), el reporte semanal de HBAC-02 y la comprobación
+mensual de la cadena (BI-02). Cloud Run cobra por instancia activa, y la capa
+gratuita de Cloud Scheduler cubre tres trabajos.
+\adrdec Todas las tareas viven en el transmisor, con un punto de entrada cada
+una (\ruta{POST /tareas/{nombre}}), que exige la cuenta del planificador y no
+es accesible desde internet. Hay tres trabajos programados:
+\ruta{transmitir} cada 30 minutos (ADR 019), \ruta{volcado} los lunes y
+\ruta{cadena} el primer día de cada mes, que es la comprobación de BI-02.
+\ruta{vencer} se lanza a mano.
+\adrpos
+\begin{itemize}
+  \item Un solo servicio y tres trabajos, dentro de la capa gratuita.
+  \item La bandeja de salida tolera atrasos: los eventos se acumulan sin
+    perderse.
+  \item Que \ruta{vencer} no corra sola no abre ningún acceso: C1 lee en cada
+    petición solo las asignaciones vigentes, y C9 compara la fecha en el motor.
+\end{itemize}
+\adrneg
+\begin{itemize}
+  \item Una falla de ese servicio detiene todas las tareas a la vez.
+  \item Hasta que alguien lanza \ruta{vencer}, una asignación o autorización
+    vencida no queda marcada como revocada ni deja su evento en la bitácora.
+  \item El reporte de HBAC-02 no se implementó (ADR 024).
+\end{itemize}
+
+\adr{012 (D-12)}{Menos herramientas de análisis}
+\adrctx Las fichas de tecnología de P1 listaban Bandit, Semgrep, pip-audit,
+Trivy, OWASP ZAP, gitleaks, hadolint, Gixy, Regal y testssl.sh. En tres
+semanas no se configuran todas con sentido.
+\adrdec Se mantienen tres: Dependabot, que el enunciado exige y cubre lo de
+pip-audit; gitleaks sobre todo el historial en cada pull request; y las
+pruebas de autorización por cada celda de la matriz, que P1 ya exigía.
+\adrpos
+\begin{itemize}
+  \item Cubren lo que el enunciado más castiga: una credencial versionada
+    anula el criterio de secretos, y el historial de git conserva lo que se
+    borra. Dependabot ya detectó una vulnerabilidad real, CVE-2025-62727 en
+    Starlette, que se atendió y se documentó en \ruta{docs/Dependabot.md}.
+  \item Las pruebas de la matriz son la evidencia de la tabla de cobertura.
+\end{itemize}
+\adrneg
+\begin{itemize}
+  \item No hay análisis estático del código ni de las imágenes, ni dinámico
+    de la aplicación desplegada.
+\end{itemize}
+
+\adr{013 (D-13)}{El segundo factor es obligatorio solo para cuatro roles}
+\adrctx La Tabla 7.1 del Informe de políticas pedía segundo factor a los ocho
+perfiles, con llave de acceso preferida y TOTP como alternativa. El ADR 005
+explica por qué no hay llaves de acceso; esta es la otra mitad.
+\adrdec El segundo factor es obligatorio para Dirección General, Dirección de
+Certificación, Personal Administrativo y Verificador, que son los que
+aprueban, emiten o cambian permisos: sin él no pasan de la pantalla de
+activación (CU-04). Para técnico de campo, auditor externo, dueño de finca y
+tercero autorizado es opcional, y una vez activo se pide siempre. El conjunto
+es una constante en \ruta{services/api/app/auth/totp.py}. Los códigos de
+recuperación de RC-02 están implementados: ocho de un solo uso, guardados
+como huella SHA-256.
+\adrpos
+\begin{itemize}
+  \item Responde al uso real: el técnico trabaja con conexión irregular, y el
+    dueño y el tercero entran pocas veces al año.
+  \item Se conservan el cierre por inactividad de cada perfil y la
+    reautenticación en las acciones críticas de la Tabla 7.1.
+  \item Extenderlo a los ocho roles es cambiar una línea.
+\end{itemize}
+\adrneg
+\begin{itemize}
+  \item En los cuatro roles sin factor obligatorio, una contraseña filtrada
+    basta para entrar (AE-02). Lo acotan CO-02, el bloqueo de RC-01 y que
+    ninguno de esos roles aprueba, emite ni cambia permisos: el técnico
+    registra mediciones y pide enmiendas, y una medición siempre la aprueba
+    otra persona (C3).
+  \item La recuperación por videollamada de RC-03 es un procedimiento humano y
+    queda fuera del sistema.
+\end{itemize}
+
+\adr{014 (D-14)}{El aviso al titular de RC-01 no llega por correo}
+\adrctx RC-01 dice «tras 10 intentos fallidos, bloqueo de 30 minutos y aviso al
+titular». El sistema no envía correos.
+\adrdec El bloqueo está implementado tal cual, con espera creciente desde el
+quinto intento. El aviso toma dos formas: el evento
+\ruta{CUENTA_BLOQUEADA} en la bitácora, y un mensaje en la pantalla del
+siguiente ingreso con los intentos fallidos desde el último.
+\adrpos
+\begin{itemize}
+  \item Cada bloqueo deja rastro, y agregar un correo es enviarlo desde el
+    mismo punto donde hoy se registra el evento.
+\end{itemize}
+\adrneg
+\begin{itemize}
+  \item El titular se entera cuando vuelve a entrar, no en el momento.
+\end{itemize}
+
+\adr{015 (D-15)}{Las solicitudes de cambio de cuenta tienen dueño fuera de la matriz}
+\adrctx C10 exige aprobación previa de Dirección General antes de que el
+Personal Administrativo cree o modifique una cuenta. Esa aprobación vive en
+\ruta{solicitudes_rol}, que no es un objeto de la matriz, así que la matriz
+no dice quién crea ni quién aprueba una solicitud. Además, el esquema solo
+modelaba el cambio de rol, y C10 gobierna también el alta y la baja.
+\adrdec Con CU-01 y CU-03 de P1: el Personal Administrativo registra la
+solicitud de la jefatura, Dirección General la aprueba o la rechaza, y el
+Personal Administrativo la aplica. La base impide que quien pide apruebe, que
+quien aprueba aplique y que nadie actúe sobre su propia cuenta. L·C10 se
+implementa literal: el Personal Administrativo ve una cuenta solo mientras
+tiene un cambio aprobado pendiente de aplicar. Un cambio de rol revoca las
+asignaciones de zona (CU-10), y el cambio de rol y la baja cierran al
+instante las sesiones (SE-01, CU-11).
+\adrpos
+\begin{itemize}
+  \item C10 cubre alta, cambio y baja, y la separación de deberes la impone la
+    base, no solo el código.
+\end{itemize}
+\adrneg
+\begin{itemize}
+  \item Quién toca las solicitudes se decide en el servidor y no en el motor:
+    lo cubren las pruebas de identidad, no las de la matriz.
+\end{itemize}
+
+\adr{016 (D-16)}{Las cuentas nuevas nacen con una contraseña temporal}
+\adrctx P1 no dijo cómo recibe alguien su primera contraseña; con Keycloak lo
+resolvía el correo de activación.
+\adrdec Al aplicar el alta, el Personal Administrativo recibe una contraseña
+temporal aleatoria de 20 caracteres que se muestra una vez. La cuenta nace
+con \ruta{debe_cambiar}: la sesión solo sirve para activar el segundo factor
+y cambiarla.
+\adrpos
+\begin{itemize}
+  \item El administrativo conoce la temporal, pero no la definitiva ni el
+    segundo factor: no puede usar la cuenta que creó.
+\end{itemize}
+\adrneg
+\begin{itemize}
+  \item Hasta el cambio, la temporal pasó por las manos del administrativo.
+\end{itemize}
+
+\adr{017 (D-17)}{Un período se crea abriéndolo}
+\adrctx La matriz le da a Dirección de Certificación Ab y Cr sobre O2, pero un
+período no se puede abrir si no existe, y ningún endpoint lo creaba.
+\adrdec \ruta{POST /periodos} crea un período que nace ABIERTO, bajo Ab;
+\ruta{POST /periodos/{id}/abrir} reabre uno cerrado. Las dos piden
+reautenticación, como cerrar. Cerrar exige que no queden mediciones
+REGISTRADAS; las DEVUELTAS no cuentan, porque no se corrigen sino que se
+enmiendan.
+\adrpos
+\begin{itemize}
+  \item Ninguna celda de la matriz cambia, y cada apertura queda en la
+    bitácora.
+\end{itemize}
+\adrneg
+\begin{itemize}
+  \item Reabrir un período vuelve a habilitar C2 y suspende C11 mientras está
+    abierto: quien lo reabre tiene que saber si hay enmiendas en curso.
+\end{itemize}
+
+\adr{018 (D-18)}{El técnico solo registra mediciones en su zona}
+\adrctx La matriz le da al técnico C sobre O3 con C2 y no menciona C1. Leída
+literal, podría registrar en una finca de una zona que no tiene asignada.
+\adrdec Al registrar, el servidor además le pregunta al motor si el técnico
+puede leer esa finca (L sobre O1, con C1); si no, niega y lo registra.
+\adrpos
+\begin{itemize}
+  \item Una cuenta de técnico comprometida no inyecta mediciones en fincas
+    ajenas, y no se amplía ningún permiso: ABAC solo restringe.
+\end{itemize}
+\adrneg
+\begin{itemize}
+  \item La condición vive donde la matriz no la puso.
+\end{itemize}
+
+\adr{019 (D-19)}{El transmisor corre cada media hora}
+\adrctx P1 describía un transmisor casi en tiempo real, con aviso si el retraso
+pasaba de cinco minutos. Cada corrida despierta las dos bases de Neon por
+cinco minutos: cada cinco minutos no se dormirían nunca, unas 180 horas al
+mes contra las 100 gratuitas, y Neon suspendería la base.
+\adrdec Cloud Scheduler invoca al transmisor cada 30 minutos. La hora que queda
+en la bitácora es la de la operación, no la de la copia.
+\adrpos
+\begin{itemize}
+  \item Las horas de cómputo alcanzan y ningún evento se pierde: la bandeja se
+    escribe en la misma transacción que la operación.
+\end{itemize}
+\adrneg
+\begin{itemize}
+  \item Un evento tarda hasta media hora en sellarse (más los dos minutos de
+    margen del transmisor). Para la presentación se invoca a mano.
+  \item Durante esa media hora no hay detección temprana; lo acota que la
+    aplicación no puede modificar la bandeja (migración 012).
+\end{itemize}
+
+\adr{020 (D-20)}{C9 se ata a la finca, y C6 compara el interior de los polígonos}
+\adrctx C9 dice $\mathit{autorizacion.tercero} = \mathit{sujeto.id} \wedge
+\mathit{hoy} < \mathit{autorizacion.vence}$ y no dice de qué finca: un tercero
+con cualquier autorización vería los certificados de todas, lo que LG-03
+prohíbe; tampoco excluye una autorización revocada (CU-09). C6 dice
+«ningún certificado vigente tiene un polígono que se superponga», y con
+\code{ST\_Intersects} solo, dos fincas que comparten un lindero se cruzan en
+el borde.
+\adrdec Para C9 el motor evalúa la condición tal cual, pero el backend solo le
+manda la autorización de la finca del certificado y no revocada; la fecha la
+sigue decidiendo el motor. Para C6 se exige que los interiores se crucen:
+\code{ST\_Intersects} y no \code{ST\_Touches}.
+\adrpos
+\begin{itemize}
+  \item Un tercero ve solo lo que le autorizaron, y una revocación deja de
+    servir; dos fincas vecinas se pueden certificar las dos. Lo cubren
+    \ruta{test_una_autorizacion_de_otra_finca_no_sirve} y
+    \ruta{test_dos_fincas_vecinas_si}.
+\end{itemize}
+\adrneg
+\begin{itemize}
+  \item Una parte de C9 vive en una consulta SQL y no en Rego.
+\end{itemize}
+
+\adr{021 (D-21)}{Anular un certificado y autorizar a un tercero piden reautenticación}
+\adrctx La Tabla 7.1 de P1 pide reautenticar antes de aprobar, emitir, abrir y
+cerrar períodos y cambiar roles. Dos acciones más pesan igual: anular un
+certificado (libera el terreno para otra emisión, así que con una sesión
+robada se podría anular y reemitir) y autorizar o extender una autorización a
+un tercero (entregar información del dueño, Ley 8968, art.~14).
+\adrdec Esas dos acciones piden reautenticación. Revocar una autorización no,
+a propósito: protege al dueño y no debe costarle nada.
+\adrpos
+\begin{itemize}
+  \item Una sesión robada ya no alcanza para anular y reemitir ni para
+    entregar datos a un tercero, y no cambia ninguna celda.
+\end{itemize}
+\adrneg
+\begin{itemize}
+  \item Un paso más en esas dos acciones.
+\end{itemize}
+
+\adr{022 (D-22)}{Un solo período de medición abierto a la vez}
+\adrctx P1 define los períodos como ventanas de registro y solo exige C2. No
+dice cuántos puede haber abiertos, y con dos un técnico podía registrar la
+misma finca en las dos ventanas.
+\adrdec Solo uno abierto: crear o reabrir responde 409 si ya hay otro, con un
+candado para que dos aperturas simultáneas no dejen dos. La regla vive en el
+servidor, porque un índice único obligaba a rehacer las pruebas de cinco
+módulos.
+\adrpos
+\begin{itemize}
+  \item Cada medición pertenece a una sola ventana, y no cambia ninguna celda.
+\end{itemize}
+\adrneg
+\begin{itemize}
+  \item Con la credencial de \ruta{app_rw} se podría abrir un segundo período
+    por SQL.
+  \item El período siguiente espera a que el anterior se cierre, y cerrar
+    exige que no queden mediciones sin revisar.
+\end{itemize}
+
+\adr{023 (D-23)}{La interfaz son plantillas del servidor, no Angular}
+\adrctx P1 eligió Angular. El enunciado dice que la interfaz no se evalúa y que
+basta una interfaz sobria que permita ejercitar todos los permisos.
+\adrdec El borde arma las páginas con plantillas Jinja, sin un marco de
+JavaScript.
+\adrpos
+\begin{itemize}
+  \item Desaparece la cadena de dependencias de npm; la CSP puede ser estricta
+    (\code{script-src 'self'}); el anti-CSRF es un token por formulario
+    comprobado en el borde.
+\end{itemize}
+\adrneg
+\begin{itemize}
+  \item Se pierde la usabilidad que motivó a P1: cada acción recarga la página.
+\end{itemize}
+
+\adr{024 (D-24)}{El reporte semanal de HBAC-02 queda fuera de alcance}
+\adrctx HBAC-02 pide un reporte semanal de volumen anómalo. No es una celda de
+la matriz, y el enunciado (§2.1) pide recortar en lo accesorio y nunca en la
+matriz ni en los controles.
+\adrdec No se implementa.
+\adrpos
+\begin{itemize}
+  \item El tiempo fue a la matriz completa y a los controles obligatorios, y
+    los datos para hacerlo están en la bitácora.
+\end{itemize}
+\adrneg
+\begin{itemize}
+  \item Un volumen anómalo no se detecta solo (crece RR-01). Lo acota que cada
+    medición la aprueba otra persona (C3).
+\end{itemize}
+
+\adr{025 (D-25)}{Las exportaciones del auditor van en la misma aplicación, en CSV}
+\adrctx La minuta comprometió un portal propio para auditores con reportes en
+PDF. La matriz da X sobre mediciones, enmiendas, certificados y bitácora.
+\adrdec Son cuatro rutas de la misma aplicación que devuelven CSV
+(\ruta{/mediciones/exportar}, \ruta{/enmiendas/exportar},
+\ruta{/certificados/exportar} y \ruta{/bitacora/exportar}), limitadas por C7
+a la ventana de auditoría.
+\adrpos
+\begin{itemize}
+  \item Las celdas X están implementadas con el mismo control de acceso que el
+    resto, y hay un componente menos que proteger.
+\end{itemize}
+\adrneg
+\begin{itemize}
+  \item No hay portal separado ni PDF: el auditor procesa los datos con sus
+    herramientas.
+\end{itemize}
+
+\end{document}

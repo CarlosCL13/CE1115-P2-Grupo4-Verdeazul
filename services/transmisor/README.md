@@ -25,10 +25,22 @@ no arranca.
 publica cerrado a internet, con su propia cuenta de servicio, **una sola
 instancia y una petición a la vez**. Se despliega solo al mergear a `develop`.
 
-**Planificador.** Cloud Scheduler lo llama cada 30 minutos. Está en pausa hasta
-que `transmitir` funcione; Carlos lo activa. P1 pedía avisar si el retraso
-pasaba de cinco minutos; con media hora es una desviación, D-19, por las horas
-de cómputo de Neon.
+**Planificador.** Cloud Scheduler lo llama con la cuenta
+`verdeazul-planificador`, que solo puede invocar este servicio. Hay dos
+trabajos activos: `transmitir-bitacora` cada 30 minutos y `volcado-bitacora`
+los lunes a las 07:00 UTC. P1 pedía avisar si el retraso pasaba de cinco
+minutos; con media hora es una desviación, D-19, por las horas de cómputo de
+Neon.
+
+Para correr `transmitir` en el momento, por ejemplo en la presentación:
+
+```
+gcloud scheduler jobs run transmitir-bitacora --project=verdeazul-g4 --location=us-east4
+```
+
+Y para pausarlo o reanudarlo, `jobs pause` y `jobs resume` con los mismos
+parámetros. El resultado de cada corrida se ve en la consola, Cloud Scheduler
+→ `transmitir-bitacora`.
 
 **`GET /salud`** dice si las dos conexiones responden. Úsala a mano, no en un
 bucle: cada llamada despierta las dos bases de Neon.

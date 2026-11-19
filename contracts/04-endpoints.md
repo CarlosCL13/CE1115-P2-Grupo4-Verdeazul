@@ -8,7 +8,7 @@ L  → GET                    C  → POST                 M  → PATCH
 A, D, Ab, Cr, Em, An, X  →  POST /recurso/{id}/accion
 ```
 
-Son 57 endpoints. Solo dos responden sin sesión: `/salud` y la verificación
+Son 56 endpoints. Solo dos responden sin sesión: `/salud` y la verificación
 pública de certificados. Todos los demás exigen sesión válida y llaman a
 `servicio_consulta_autorizacion()` (contrato 02) antes de hacer cualquier cosa.
 
@@ -27,17 +27,16 @@ implementar, así que la cuenta de endpoints es la cuenta de puntos.
 
 ## Reparto
 
-| | Módulos | Endpoints | Hechos al 12 de noviembre |
+| | Módulos | Endpoints | Quién lo hizo |
 |---|---|---|---|
-| Persona 1 | plataforma, O7, O8, **O4** | 16 | 1: `/salud` |
-| Persona 2 | autenticación, O6, O9, O10 | 13 | 13 |
-| Persona 3 | el motor que llaman los otros 56 | 1 | 0 |
-| Persona 4 | O1, O2, O3 | 15 (con `POST /periodos`, D-17) | 15 |
-| Persona 5 | O5, O11, transmisor | 12 | 0 |
+| Persona 1 | plataforma, O7, O8, **O4** | 16 | Carlos la plataforma y `/salud`; Meibel O7; Adriel O8 y O4 |
+| Persona 2 | autenticación, O6, O9, O10 | 13 | Henry |
+| Persona 3 | el motor que llaman los otros 56 | — | Ludwin |
+| Persona 4 | O1, O2, O3 | 15 (con `POST /periodos`, D-17) | Henry |
+| Persona 5 | O5, O11, transmisor | 12 | Meibel O5; Adriel O11 y el transmisor |
 
-**Van 29 de 57.** Lo que falta todavía no tiene dueño: está en orden de
-prioridad en [README.md](README.md), sección «Dónde estamos». La última
-columna de cada tabla de abajo dice si el endpoint ya existe.
+**Están los 56.** La última columna de cada tabla de abajo lo confirma uno por
+uno.
 
 **O4 enmiendas pasó de la persona 4 a la persona 1.** La 4 tenía 21 endpoints y
 la 1 tenía nueve. Enmiendas es lo más separable del flujo porque va al final: no
@@ -206,19 +205,10 @@ defendible en la presentación y conviene que la persona 2 la sepa explicar.
 `services/policies/rego/autorizacion.rego`, `condiciones.rego`
 **Pruebas:** `tests/matriz/test_celdas.py`
 
-No escribe endpoints de negocio: escribe la función que los otros 56 llaman
-antes de tocar la base de datos. Su entrega se mide en pruebas, no en rutas: 84
-casillas concedidas que hoy están en `xfail` y 884 negaciones que ya pasan y no
-se deben romper.
-
-| Endpoint | Para qué sirve | Necesita | Cubre | Estado |
-|---|---|---|---|---|
-| `GET /authz/explicar` | Enseñar en vivo la decisión y el motivo: «no, porque C6 impide que quien registró la medición emita el certificado» | solo Dirección General, registrado en bitácora | Presentación 5 | Pendiente, opcional |
-
-Este endpoint es opcional y es para la demostración del 19. Va restringido a un
-rol y cada consulta queda en bitácora, porque un endpoint que responde preguntas
-sobre permisos ajenos es una fuga de información si queda abierto. Si no da
-tiempo, se quita sin consecuencias.
+No escribe endpoints: escribe la función que los otros 56 llaman antes de
+tocar la base de datos. Su entrega se mide en pruebas, no en rutas: las 968
+combinaciones de la matriz, 84 que se conceden y 884 que se niegan, pasan en
+cada pull request contra un OPA real.
 
 ---
 

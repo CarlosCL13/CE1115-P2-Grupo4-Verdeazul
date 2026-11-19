@@ -123,7 +123,7 @@ Para acciones que ningún objeto cubre (quién aprueba una solicitud de cambio
 de rol, quién crea una ventana de auditoría) está `exigir_rol(sesion,
 {"DIRECCION_GENERAL"}, "crear una ventana de auditoria", "O11:ventana")`. Niega
 por omisión, registra y responde 403 igual que `autorizar`. Cada uso tiene que
-estar justificado en `docs/P2_Desviaciones_respecto_P1.md`.
+estar justificado en el Anexo A del informe, `docs/informe/Informe-Grupo4.tex`.
 
 ## Errores
 

@@ -83,4 +83,4 @@ La base de pruebas es desechable y nunca es Neon.
 ## Desviaciones respecto a la Parte 1
 
 D-17 y D-18 en
-[`docs/P2_Desviaciones_respecto_P1.md`](../../../../docs/P2_Desviaciones_respecto_P1.md).
+el Anexo A del informe, [`docs/informe/Informe-Grupo4.tex`](../../../../docs/informe/Informe-Grupo4.tex).

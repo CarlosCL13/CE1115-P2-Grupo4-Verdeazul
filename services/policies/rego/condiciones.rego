@@ -11,9 +11,9 @@ atributos := input.objeto.atributos # es un diccionario de atributos que tiene e
 # C1 - ABAC de zona
 # Aplica a TC (Tecnico de campo)-> O1, O3, O4, O8 y a VF -> O1, O3, O8
 #
-# Caso pendiente: O8 (asignaciones tecnico-zona) tiene zona propia y no
-# necesariamente una finca detras. Hoy se pasa bajo la misma clave. Ver
-# docs/Preguntas_abiertas.md.
+# En O8 (asignaciones tecnico-zona) no hay una finca detras: el backend
+# manda la zona de la asignacion bajo la misma clave finca.zona
+# (contrato 02), asi que C1 se evalua igual en los cuatro objetos.
 # ---------------------------------------------------------------------------
 cumplidas contains "C1" if {
 	atributos["finca.zona"] in input.sujeto.zonas

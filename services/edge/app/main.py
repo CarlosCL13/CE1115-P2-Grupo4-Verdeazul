@@ -71,6 +71,9 @@ async def cabeceras_de_seguridad(request: Request, call_next):
     respuesta.headers["Referrer-Policy"] = "same-origin"
     respuesta.headers["X-Frame-Options"] = "DENY"
     respuesta.headers["Permissions-Policy"] = "geolocation=(), camera=(), microphone=()"
+    # Un ano solo por HTTPS (§2.3.4): el navegador no vuelve a intentar http://
+    # con este sitio. Por http://localhost los navegadores la ignoran.
+    respuesta.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     # Las paginas con datos de una sesion no se guardan en caches compartidas
     # ni en el historial del navegador.
     respuesta.headers.setdefault("Cache-Control", "no-store")

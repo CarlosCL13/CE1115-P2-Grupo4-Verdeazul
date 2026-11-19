@@ -1,0 +1,12 @@
+# Lo que deja pdflatex al compilar en local. El PDF final se sube aparte, a
+# la entrega, no al repositorio.
+*.aux
+*.log
+*.out
+*.toc
+*.lof
+*.lot
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.pdf

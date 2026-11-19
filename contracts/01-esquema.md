@@ -188,7 +188,7 @@ finca. `certificados` guarda una copia del momento de emisión.
 La matriz **no dice quién crea una ventana de auditoría**, porque no es un
 objeto y ninguna celda lo cubre. Decidimos Dirección General. Es decisión
 nuestra, no heredada, y va a
-[`docs/P2_Desviaciones_respecto_P1.md`](../docs/P2_Desviaciones_respecto_P1.md).
+el Anexo A del informe, [`docs/informe/Informe-Grupo4.tex`](../docs/informe/Informe-Grupo4.tex).
 
 ## Lo que agregó la 011
 
@@ -224,6 +224,18 @@ revertida: `app_rw` pierde UPDATE sobre la bandeja y sobre `firma`, y
 Los certificados no llevan una serie aparte: la verificación pública recibe
 el archivo y no consulta la base (D-09), así que el id secuencial no expone
 nada que no se haya aceptado ya en `db/migrations/README.md`.
+
+## Lo que agregaron la 013 y la 014
+
+| Migración | Tabla | Cambio | Para qué |
+|---|---|---|---|
+| `013_certificados_documento.sql` | `certificados` | Columna `documento`, el archivo firmado tal como se entregó | Es lo que descarga el dueño y lo que se sube a la verificación pública. Reconstruirlo desde columnas podía dejar de cuadrar con la firma si cambiaba un dato |
+| `014_transmisor_vencer.sql` | `asignaciones_zona`, `consentimientos` | `outbox_rw` lee las columnas que necesita y solo puede escribir la fecha de revocación | La tarea `vencer` revoca lo vencido (HBAC-03) sin poder cambiar la zona, el tercero ni extender un vencimiento |
+| `014_transmisor_vencer.sql` | `eventos_pendientes` | `outbox_rw` puede anotar un evento | Que cada revocación automática quede en la bitácora igual que una hecha a mano |
+
+`app_rw` no puede modificar `documento`: la 012 le dejó UPDATE solo sobre
+`estado`, `motivo_anulacion` y `anulado_en`, así que lo firmado no cambia
+después de emitido, ni siquiera desde la aplicación.
 
 ## Dos límites de la plataforma
 

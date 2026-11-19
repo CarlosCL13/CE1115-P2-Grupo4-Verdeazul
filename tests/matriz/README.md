@@ -7,25 +7,26 @@ informe (§5.1, punto 6).
 pytest tests/matriz -v
 ```
 
-La matriz vive como datos en [`conftest.py`](conftest.py), transcrita de
+La matriz vive como datos en [`conf_test_celdas.py`](conf_test_celdas.py), transcrita de
 [`contracts/matriz.md`](../../contracts/matriz.md). Las pruebas se generan a
 partir de esos datos, así que agregar una celda es editar una línea, no
 escribir una prueba nueva.
 
 ## Las dos direcciones
 
-| Familia | Casos | Estado hoy |
+| Familia | Casos | Estado |
 |---|---|---|
-| Lo que la matriz **no** concede se niega | 884 | Pasan, y tienen que seguir pasando |
-| Lo que la matriz **sí** concede se permite | 84 | `xfail` hasta que la persona 3 implemente |
+| Lo que la matriz **no** concede se niega | 884 | Pasan |
+| Lo que la matriz **sí** concede se permite | 84 | Pasan |
 
 La primera familia es la que de verdad protege. Es fácil acordarse de probar
 que un verificador puede aprobar; es fácil olvidar probar que un tercero
 autorizado **no** puede leer la bitácora. Esas 884 son las que detectan que
 alguien concedió de más.
 
-## Cómo avanza esto
+## Dónde corren
 
-Cada celda que la persona 3 implementa convierte un `xfail` en `xpass`. Cuando no quede
-ningún `xfail`, la matriz está completa y la tabla de cobertura se genera desde
-la salida de pytest.
+En el job «Pruebas de la matriz» del CI, en cada pull request, contra un OPA
+real que el job levanta antes de pytest. Si el motor no arranca, el job falla en
+rojo: no puede quedar en verde con las pruebas saltadas. Junto con
+`test_motor.py` son 977.

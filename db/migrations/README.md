@@ -20,7 +20,7 @@ cada pull request.
 
 | Archivo | Quién | Tablas |
 |---|---|---|
-| `002_zonas.sql` | p4 | `zonas` |
+| `002_catalogos.sql` | p4 | `zonas` y los tipos enumerados |
 | `003_cuentas.sql` | p2 | `cuentas` |
 | `004_identidad.sql` | p2 | `credenciales`, `sesiones`, `datos_personales`, `solicitudes_rol` |
 | `005_fincas_periodos.sql` | p4 | `fincas`, `periodos_medicion` |
@@ -32,6 +32,7 @@ cada pull request.
 | `011_identidad_ajustes.sql` | p2 | columnas de sesión, segundo factor y solicitudes de alta y baja |
 | `012_transmisor_y_certificados.sql` | p1 | el eslabón en la bandeja, y permisos por columna en la bandeja y en `certificados` |
 | `013_certificados_documento.sql` | p5 | `certificados.documento`: el archivo firmado tal como se entregó, sin UPDATE para `app_rw` |
+| `014_transmisor_vencer.sql` | p5 | permisos de `outbox_rw` para revocar lo vencido y anotar el evento |
 
 El orden no es estético, lo imponen las llaves foráneas. `consentimientos`
 apunta a `fincas`, así que la 007 va después de la 005. `enmiendas` y

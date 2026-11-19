@@ -32,7 +32,8 @@ intento queda en la bitacora y el administrativo recibe 403.
 
 Las solicitudes no son un objeto de la matriz (contrato 01): son la tabla que
 hace evaluable a C10. Quien las crea y quien las aprueba lo decidimos con
-CU-01 y CU-03 de P1, y va en docs/P2_Desviaciones_respecto_P1.md.
+CU-01 y CU-03 de P1, y va como D-15 en el Anexo A del informe
+(docs/informe/Informe-Grupo4.tex).
 """
 
 import re
