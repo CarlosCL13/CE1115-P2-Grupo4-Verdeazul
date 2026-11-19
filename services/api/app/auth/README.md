@@ -108,4 +108,4 @@ Es una configuración única en la nube, y sin ella el servicio no arranca.
 ## Desviaciones respecto a la Parte 1
 
 D-13 a D-16 en
-[`docs/P2_Desviaciones_respecto_P1.md`](../../../../docs/P2_Desviaciones_respecto_P1.md).
+el Anexo A del informe, [`docs/informe/Informe-Grupo4.tex`](../../../../docs/informe/Informe-Grupo4.tex).

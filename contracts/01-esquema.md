@@ -188,7 +188,7 @@ finca. `certificados` guarda una copia del momento de emisión.
 La matriz **no dice quién crea una ventana de auditoría**, porque no es un
 objeto y ninguna celda lo cubre. Decidimos Dirección General. Es decisión
 nuestra, no heredada, y va a
-[`docs/P2_Desviaciones_respecto_P1.md`](../docs/P2_Desviaciones_respecto_P1.md).
+el Anexo A del informe, [`docs/informe/Informe-Grupo4.tex`](../docs/informe/Informe-Grupo4.tex).
 
 ## Lo que agregó la 011
 
