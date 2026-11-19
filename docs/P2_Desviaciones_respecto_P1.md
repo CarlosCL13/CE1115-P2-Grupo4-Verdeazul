@@ -2,7 +2,7 @@
 
 Documento de trabajo del Grupo 4. Alimenta la sección 5 del informe de la Parte 2.
 
-El diseño que entregamos en octubre asumía servidores propios y una restricción del cliente de usar solo software libre. La Parte 2 impone una plataforma concreta: Cloud Run, Neon, Secret Manager y Artifact Registry, con imágenes de Docker. Casi todas las desviaciones que siguen salen de ese cambio de supuesto.
+El diseño que entregamos en octubre asumía servidores propios y una restricción del cliente de usar solo software libre. La Parte 2 (Proyecto 2) impone una plataforma concreta: Cloud Run, Neon, Secret Manager y Artifact Registry, con imágenes de Docker. Casi todas las desviaciones que siguen salen de ese cambio de supuesto.
 
 El modelo de control de acceso no cambia. Los ocho roles, los once objetos, las once operaciones y las condiciones C1 a C11 se implementan tal como se diseñaron. Lo que cambia es con qué se construye, y en tres casos eso tiene consecuencias de seguridad que conviene decir en voz alta.
 
@@ -45,30 +45,30 @@ Cada desviación está escrita como un registro de decisión de arquitectura (AD
 
 **Contexto**
 
-El Informe de políticas recoge una restricción explícita de la cliente: presupuesto únicamente para software libre, que quedó como requerimiento R11 y como regla operativa LG-08. La Parte 2 impone Cloud Run, Neon, Secret Manager y Artifact Registry, que son servicios propietarios.
+El Informe de políticas recoge una restricción explícita de la cliente: presupuesto únicamente para software libre, que quedó como requerimiento R11 y como regla operativa LG-08. Esta parte 2 (Proyecto 2) impone Cloud Run, Neon, Secret Manager y Artifact Registry, que son servicios propietarios.
 
 **Decisión**
 
-El sistema se aloja en esos cuatro servicios. Todo el software que escribimos y todas sus dependencias siguen teniendo licencia libre: Python, FastAPI, PostgreSQL, PostGIS, OPA. Lo que se volvió propietario es solo la capa de alojamiento.
+El sistema se aloja en esos cuatro servicios del propietario. Todo el software que escribimos y todas sus dependencias siguen teniendo licencia libre: Python, FastAPI, PostgreSQL, PostGIS, OPA. Lo que se volvió propietario es solo la capa de alojamiento (donde se ejecuta).
 
 **Consecuencias**
 
 *Positivas*
 
-- Los cuatro servicios tienen capa gratuita suficiente para este sistema, así que la restricción de presupuesto se respeta aunque la de licencia no.
-- Las mitigaciones que P1 ya proponía para el riesgo del proveedor siguen aplicando: los datos personales se cifran dentro de la aplicación, de modo que la base guarda texto cifrado, y las cuentas de administración de la nube llevan segundo factor.
+- Los cuatro servicios tienen capa gratuita suficiente para este sistema, así que la restricción de presupuesto se respeta aunque la de licencia no (porque el sistema utiliza tecnologías propietarias no libres).
+- Las mitigaciones que P1 ya proponía para el riesgo del proveedor siguen aplicando: los datos personales se cifran dentro de la aplicación, de modo que en la base de datos se guarda texto cifrado, y las cuentas de administración de la nube llevan segundo factor.
 
 *Negativas*
 
-- El riesgo residual RR-02 de P1, que el proveedor de nube o una cuenta de administración comprometida acceda a los datos, crece. Al pasar de alquilar máquinas a usar servicios gestionados, el proveedor también custodia los secretos y ejecuta el motor de base de datos.
-- R11 y LG-08 no se cumplen en la capa de alojamiento.
+- El riesgo residual RR-02 de P1 crece, que el proveedor de nube o una cuenta de administración comprometida acceda a los datos (abuso de permisos). Al pasar de alquilar máquinas a usar servicios gestionados, el proveedor también custodia los secretos y ejecuta el motor de base de datos.
+- R11 y LG-08 (software libre) no se cumplen en la capa de alojamiento.
 
 ## ADR 002 (D-02)
 ### Docker en lugar de Podman sin privilegios
 
 **Contexto**
 
-El documento de arquitectura eligió Podman y descartó Docker Engine porque su servicio central corre con privilegios de administrador. El enunciado exige imágenes de Docker publicadas en Artifact Registry.
+El documento de arquitectura eligió Podman y descartó Docker Engine porque su servicio central corre con privilegios de administrador. Sin embargo esta parte 2, exige imágenes de Docker publicadas en Artifact Registry.
 
 **Decisión**
 
@@ -78,37 +78,37 @@ Las imágenes se construyen con Docker. Cada Dockerfile declara un usuario sin p
 
 *Positivas*
 
-- El demonio de Docker existe solo donde se construye la imagen. En producción quien ejecuta el contenedor es Cloud Run, que no usa Docker y aísla cada instancia en su propio entorno.
-- Se conserva lo que de verdad le preocupaba a P1, el mínimo privilegio en la ejecución, que es además lo que revisa el enunciado.
+- El demonio (daemon) de Docker existe solo donde se construye la imagen. En producción quien ejecuta el contenedor es Cloud Run, que no usa Docker y aísla cada instancia en su propio entorno.
+- Se conserva el mínimo privilegio en la ejecución, no se ejecuta como root.
 
 *Negativas*
 
-- La construcción depende de un demonio con privilegios de administrador. En este proyecto corre en los runners de GitHub Actions, no en una máquina nuestra.
+- La construcción depende de un demonio con privilegios de administrador. En este proyecto se crea en los runners de GitHub Actions (CI), no en una máquina nuestra.
 
 ## ADR 003 (D-03)
 ### Secret Manager en lugar de OpenBao
 
 **Contexto**
 
-P1 había descartado explícitamente los gestores de secretos de los proveedores de nube por crear dependencia del proveedor, y el enunciado los impone. OpenBao hacía tres cosas que Secret Manager no hace: generaba credenciales de base de datos con vida limitada que se renovaban solas, firmaba cada eslabón de la bitácora con el motor Transit sin que la llave saliera nunca de él, y cifraba los datos personales sin entregarle la llave a nadie.
+En el proyecto 1 se había descartado explícitamente los gestores de secretos de los proveedores de nube por crear dependencia del proveedor, pero esta parte 2 los impone. OpenBao hacía tres cosas que Secret Manager no hace: generaba credenciales de base de datos con vida limitada que se renovaban solas, firmaba cada registro de la bitácora con el motor Transit sin que la llave saliera nunca de él, y cifraba los datos personales sin entregarle la llave a nadie.
 
 **Decisión**
 
-Los secretos viven en Secret Manager y se inyectan como variables de entorno. Cada servicio se autentica con su propia cuenta y solo puede leer los secretos que necesita. Las tres funciones de OpenBao pasan a la aplicación:
+Los secretos viven ahora en Secret Manager y se inyectan como variables de entorno. Cada servicio se autentica con su propia cuenta y solo puede leer los secretos que necesita. Las tres funciones de OpenBao pasan a la aplicación:
 
 - La aplicación usa una contraseña de Neon guardada como secreto, con rotación manual.
-- La llave del HMAC de la bitácora llega al proceso del transmisor y el cálculo ocurre en memoria.
-- La cédula y el teléfono se siguen cifrando antes de guardarse, como exige LG-05, con la llave en el proceso del backend. La búsqueda por cédula sigue usando un valor derivado en lugar del dato.
+- La llave del HMAC (el hash) de la bitácora llega al proceso del transmisor y el cálculo ocurre en memoria.
+- La cédula y el teléfono se siguen cifrando antes de guardarse, como se exige en LG-05, con la llave en el proceso del backend. La búsqueda por cédula sigue usando un valor derivado en lugar del dato.
 
 **Consecuencias**
 
 *Positivas*
 
 - Ninguna credencial vive en el repositorio ni en las imágenes, y cada servicio solo lee lo suyo.
-- Los cambios de configuración y de permisos sobre los secretos quedan en los registros de auditoría de Google Cloud, que vienen activados por omisión.
+- Los cambios de configuración y de permisos sobre los secretos quedan en los registros de auditoría de Google Cloud, que vienen activados por defecto.
 - El rol de aplicación tiene privilegios mínimos: no es dueño de las tablas y no puede alterar el esquema.
 - La bitácora vive en una instancia de Neon separada, donde el transmisor solo puede insertar.
-- La tarea `volcado` del transmisor (ADR 007) sube cada semana la bitácora completa, con el eslabón de cada evento, a un depósito de Cloud Storage donde nada se puede borrar ni reemplazar en diez años. Si alguien con la llave reescribe la cadena en Neon, la versión reescrita deja de coincidir con las copias anteriores, que ya no puede tocar. La tarea `cadena` además recalcula la cadena completa y deja constancia de cada comprobación en la propia bitácora.
+- La tarea `volcado` del transmisor (ADR 007) sube cada semana la bitácora completa, con el registro o fila de cada evento, a un depósito de Cloud Storage donde nada se puede borrar ni reemplazar en diez años. Si alguien con la llave reescribe la cadena en Neon, la versión reescrita deja de coincidir con las copias anteriores, que ya no puede tocar. La tarea `cadena` además recalcula la cadena completa y deja constancia de cada comprobación en la propia bitácora.
 
 *Negativas*
 
