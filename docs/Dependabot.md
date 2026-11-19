@@ -82,13 +82,31 @@ cambia.
 
 | PR | Cambio | Qué prueba el CI | Decisión |
 |---|---|---|---|
-| #34 | Transmisor: `fastapi` 0.162.2 → 0.162.7, `psycopg` 3.3.8 → 3.3.9 (parches) | Las pruebas del transmisor (cadena, vencer, volcado, transmitir) y la construcción de la imagen | Seguro de aceptar; después de la entrega, junto con #32 y #31 |
+| #34 | Transmisor: `fastapi` y `psycopg` 3.3.8 → 3.3.9 | Las pruebas del transmisor (cadena, vencer, volcado, transmitir) y la construcción de la imagen | **Aceptado y mergeado** el 19 de noviembre (abajo) |
 | #32 | Backend: los mismos dos parches | La matriz contra OPA y todas las pruebas de integración contra PostgreSQL usan las dependencias del backend | Después de la entrega |
 | #31 | Borde: `fastapi` 0.162.2 → 0.162.7 | Desde esta ronda, el job «Borde» del CI ejercita las páginas, los formularios y las cabeceras | Después de la entrega |
 | #33 | OPA 1.4.2 → 1.22.4 | La matriz y `opa test` corren con la versión del Dockerfile | Después de la entrega: es un salto de 18 versiones del motor que decide todo |
 | #5 | `gitleaks-action` v2 → v3 | Es el propio job de gitleaks | Después de la entrega |
 | #29, #30 | `google-github-actions/auth` y `setup-gcloud` v2 → v3 | **Nada**: solo se usan en `desplegar.yml`, que no corre en el CI | Después de la entrega, con un despliegue vigilado |
 | #1 | Python 3.14 → 3.15 en el borde | La construcción de la imagen | Cerrado: versión mayor, ignorada con `@dependabot ignore this major version` |
+
+### El PR de Dependabot aceptado directamente: #34
+
+En la primera ronda la propuesta de Dependabot (su PR #25) se aplicó en un PR
+propio, el #24, que la extendía a los tres servicios; Dependabot cerró el
+suyo sin mergear porque el cambio ya estaba en `develop`. El #34 se aceptó tal
+como lo propuso Dependabot:
+
+- **Qué entró:** en `services/transmisor`, `fastapi` 0.162.2 → **0.163.1** y
+  `psycopg` 3.3.8 → **3.3.9**. Cuando se revisó, el PR proponía `fastapi`
+  0.162.7; Dependabot actualizó la rama antes del merge y la llevó a 0.163.1.
+  El CI corrió de nuevo sobre esa versión, que es la que se mergeó.
+- **Por qué es seguro:** el CI prueba el transmisor de punta a punta
+  (transmitir, cadena, vencer y volcado, más la construcción de la imagen),
+  y los 10 checks pasaron. El transmisor no es lo que ve el usuario, y si el
+  despliegue fallara, Cloud Run seguiría con la revisión anterior.
+- **Resultado:** el despliegue de `1194a48` terminó bien y los tres servicios
+  corren esa versión.
 
 La alerta que el enunciado pide atender ya se atendió en la primera ronda
 (PR #24). En esta no hay ninguna vulnerabilidad: son versiones nuevas, y el

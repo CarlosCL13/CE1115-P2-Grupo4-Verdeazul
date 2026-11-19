@@ -371,8 +371,16 @@
 
 \makecover
 
+% El indice lleva el encabezado pero no numero: las paginas se cuentan desde
+% los datos de entrega, que son la pagina 1.
+\fancyfoot{}
+\begingroup
+\renewcommand{\thispagestyle}[1]{}
 \tableofcontents
 \clearpage
+\endgroup
+\fancyfoot[C]{\footnotesize P\'agina \thepage\ de \pageref{LastPage}}
+\setcounter{page}{1}
 
 % ============================================================================
 % 0. DATOS DE ENTREGA                                   Responsable: Meibel
@@ -390,7 +398,7 @@ Sistema desplegado & \url{\urlSistema}\\
 Repositorio        & \url{\urlRepo}\\
 Google Cloud       & Proyecto \ruta{verdeazul-g4}, regi\'on \ruta{us-east4}\\
 Neon               & \ruta{verdeazul-app} (principal) y \ruta{verdeazul-bitacora} (bit\'acora), AWS \ruta{us-east-1}\\
-Versi\'on entregada & \ruta{0957249}: la etiqueta de las im\'agenes de los tres servicios, que es el commit de donde salieron; aparece al pie de cada p\'agina del sistema\\
+Versi\'on entregada & \ruta{1194a48}: la etiqueta de las im\'agenes de los tres servicios, que es el commit de donde salieron; aparece al pie de cada p\'agina del sistema\\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -584,6 +592,7 @@ Los seis controles obligatorios de la secci\'on~2.3 del enunciado est\'an
 implementados en el servidor, y cada uno tiene pruebas autom\'aticas que corren
 en cada \emph{pull request} (\cref{tab:controles}).
 
+{\small
 \begin{xltabular}{\linewidth}{@{}P{2.7cm}YY@{}}
 \caption{Controles obligatorios: d\'onde est\'an y c\'omo se verifican.}
 \label{tab:controles}\\
@@ -647,6 +656,7 @@ en cada \emph{pull request} (\cref{tab:controles}).
   contra PostGIS y OPA. En producci\'on: \cref{fig:ev-valido}.
   Huella publicada: \ruta{SHA256:203b7265...df811d}. \\
 \end{xltabular}
+}
 
 % Opcional, si cabe en el presupuesto: controles de P1 que tambien quedaron
 % (TOTP, bloqueo por intentos, datos cifrados, separacion de deberes,
@@ -685,7 +695,7 @@ El sistema usa ocho secretos. Viven en Secret Manager, en el proyecto
 el job \emph{Buscar credenciales versionadas} corre gitleaks sobre todo el
 historial de git, que conserva lo que se borra (\cref{tab:secretos}).
 
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering\small
 \caption{Secretos en Secret Manager y qui\'en los lee.}
 \label{tab:secretos}
@@ -763,7 +773,7 @@ protege cada lado.
 
 \subsection{Neon}
 
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering\small
 \caption{Neon: lo que pone la plataforma y lo que pusimos nosotros.}
 \label{tab:neon}
@@ -826,7 +836,7 @@ Estas quedaron de nuestro lado:
 
 \subsection{Cloud Run: responsabilidad compartida}
 
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering\small
 \caption{Cloud Run: d\'onde est\'a la l\'inea.}
 \label{tab:cloudrun}
@@ -1171,11 +1181,11 @@ lee los suyos. La captura muestra la lista sin abrir ning\'un valor.}
   \captionsetup{type=figure}
   {\normalsize\bfseries\color{tecnavy} E3. Dependabot activo\par}
   \smallskip
-  {\small Dependabot revisa las dependencias de Python, las im\'agenes de
-  Docker y las acciones de GitHub, y abre un \emph{pull request} por cada
-  versi\'on nueva o vulnerabilidad conocida, que pasa por el mismo CI. Ya
-  encontr\'o una real, CVE-2025-62727 en Starlette, que se atendi\'o en el
-  PR \#24. La decisi\'on sobre cada PR est\'a en \ruta{docs/Dependabot.md}.\par}
+  {\small Revisa Python, Docker y las acciones de GitHub, y abre un
+  \emph{pull request} por versi\'on nueva o vulnerabilidad, que pasa por el
+  mismo CI. Encontr\'o CVE-2025-62727 en Starlette, atendida en el PR \#24, y
+  se acept\'o directamente su PR \#34 tras pasar los checks. Cada decisi\'on:
+  \ruta{docs/Dependabot.md}.\par}
   \medskip
   \begin{subfigure}{\linewidth}
     \centering
@@ -1225,7 +1235,7 @@ Cada rol solo ve en pantalla lo que la matriz le concede. El técnico de campo t
 \appendix
 \crefname{section}{anexo}{anexos}
 \Crefname{section}{Anexo}{Anexos}
-\section{Registro de decisiones de arquitectura}
+\section{Anexo: Registro de decisiones de arquitectura}
 \label{anx:adr}
 
 El diseño de octubre asumía servidores propios y una restricción de la
