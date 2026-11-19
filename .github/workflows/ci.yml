@@ -200,6 +200,33 @@ jobs:
       - name: Pruebas del transmisor
         run: pytest -v
 
+  # El borde contra un backend falso: que cada pagina se dibuje para los ocho
+  # roles, las cabeceras de seguridad (HSTS, CSP), el CSRF y el control de
+  # origen, y como traduce un 403, una reautenticacion o un backend caido.
+  # Antes el CI solo construia su imagen, asi que un cambio de dependencias
+  # del borde pasaba los checks sin que nadie dibujara una pagina.
+  borde:
+    name: Borde
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tests/borde
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+
+      - name: Instalar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r ../../services/edge/requirements.txt
+          pip install pytest
+
+      - name: Pruebas del borde
+        run: pytest -v
+
   politicas:
     name: Politicas en Rego
     runs-on: ubuntu-latest
