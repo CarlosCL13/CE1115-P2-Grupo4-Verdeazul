@@ -1,5 +1,7 @@
-# Lo que deja pdflatex al compilar en local. El PDF final se sube aparte, a
-# la entrega, no al repositorio.
+# Lo que deja la compilacion en local. El PDF NO va aqui: se versiona, para
+# que el informe compilado este en el repositorio. Recompilarlo con
+#   latexmk Informe-Grupo4.tex
+# antes de cada commit que cambie el .tex o las imagenes.
 *.aux
 *.log
 *.out
@@ -9,4 +11,3 @@
 *.fls
 *.fdb_latexmk
 *.synctex.gz
-*.pdf
