@@ -958,13 +958,11 @@ administrador del proyecto todav\'ia podr\'ia quitar (RR-02).
 \section{Cobertura de la matriz}
 \label{sec:cobertura}
 
-% Borrador pasado desde docs/Informe_P2.md (seccion 6). Ludwin: revisar los
-% numeros contra tests/matriz y recortar si no cabe.
 La matriz tiene 88 celdas (8 roles $\times$ 11 objetos). Entre sus pares de rol
 y operaci\'on hay 84 permisos concedidos, 37 de ellos con una de las
-condiciones C1 a C11, y 884 pares negados por omisi\'on. \textbf{Todos} est\'an
-probados en el motor por \ruta{tests/matriz/test_celdas.py}: 977 pruebas
-contra un OPA real en cada \emph{pull request}. La \cref{tab:cobertura} dice
+condiciones C1 a C11, y 884 casos donde se niega por omisi\'on. Cada uno de estos casos est\'an
+probados por \ruta{tests/matriz/test_celdas.py} y \ruta{tests/matriz/test_motor.py}: 976 pruebas
+contra un OPA real en cada \emph{pull request} y \emph{merge} a la rama \ruta{develop} o \ruta{main}. La \cref{tab:cobertura} dice
 adem\'as d\'onde vive cada permiso y qu\'e prueba lo ejercita de punta a punta,
 contra PostgreSQL y OPA.
 
@@ -995,7 +993,7 @@ O2 Per\'iodos & L & DG, DC, TC, VF, DF; AE (C7) & \ruta{GET /periodos}, \ruta{/p
  & Cr & DC & \ruta{POST /periodos/{id}/cerrar} & \textit{idem}\\
 \addlinespace
 O3 Mediciones & L & DG, DC, VF; TC (C1); AE (C7); DF (C8) & \ruta{GET /mediciones}, \ruta{/mediciones/{id}} & \ruta{test_mediciones.py}\\
- & C & TC (C2, y C1 por D-18); VF (C1 $\wedge$ C2) & \ruta{POST /mediciones} & \textit{idem}\\
+ & C & TC (C2 por D-18); VF (C1 $\wedge$ C2) & \ruta{POST /mediciones} & \textit{idem}\\
  & A, D & VF (C3) & \ruta{POST /mediciones/{id}/aprobar}, \ruta{/devolver} & \textit{idem}\\
  & X & AE (C7) & \ruta{GET /mediciones/exportar} & \textit{idem}\\
 \addlinespace
@@ -1031,9 +1029,9 @@ O11 Bit\'acora & L & DG, DC, PA; AE (C7) & \ruta{GET /bitacora} & \ruta{test_bit
 }
 
 Nadie tiene E (eliminar) sobre ning\'un objeto, y no existe ninguna ruta
-DELETE. O10 no tiene L a prop\'osito: las credenciales se cambian y no se
+DELETE. O10 no tiene L a prop\'osito, pues las credenciales se cambian y no se
 consultan, as\'i que no existe \ruta{GET /credenciales}. Adem\'as de las
-pruebas, cada objeto se ejercit\'o a mano en el sistema desplegado con las
+pruebas aisladas, cada objeto se ejercit\'o a mano en el sistema desplegado con las
 cuentas de prueba, y los intentos negados aparecen en la propia bit\'acora
 (\cref{fig:ev-denegado}).
 

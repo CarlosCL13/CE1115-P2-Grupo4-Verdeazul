@@ -117,7 +117,7 @@ def celdas_concedidas():
             yield rol, objeto, operacion, condicion
 
 def celdas_denegadas():
-    # Aquellas celdas que no tienen ninguna operación
+    # Devuelve aquellas celdas que no tienen ninguna operación en formato (rol, objeto, operacion), cada uno es un string
     for (rol, objeto), permisos in MATRIZ.items():
         for operacion in OPERACIONES:
             if operacion not in permisos:
