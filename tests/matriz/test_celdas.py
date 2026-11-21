@@ -15,7 +15,7 @@ ZONA_ASIGNADA = "norte"
 LEJOS = "2999-12-31"
 HACE_MUCHO = "2000-01-01"
 
-
+# Ejemplo de sujeto que se usa en los tests, con id y zona fijos, y rol variable
 def _sujeto(rol: str) -> Sujeto:
     return Sujeto(id=SUJETO_ID, rol=rol, zonas=(ZONA_ASIGNADA,))
 
