@@ -43,15 +43,13 @@ original; esta sección dice cómo quedó y qué falta.
 | Certificados y consentimientos | Meibel | O5 con C6, firma Ed25519 y verificación pública; O7 con C8 (migración 013, D-20 y D-21) |
 
 Están **los 56 endpoints** de la matriz (17 de noviembre). Cuáles, uno por uno, está en la última
-columna de [04-endpoints.md](04-endpoints.md). El informe está en
-[docs/informe/Informe-Grupo4.tex](../docs/informe/Informe-Grupo4.tex).
+columna de [04-endpoints.md](04-endpoints.md).
 
-### Lo que falta
+### El informe
 
-Lo grande ya está. Queda terminar el informe, de 6 a 10 páginas, en
-[docs/informe/Informe-Grupo4.tex](../docs/informe/Informe-Grupo4.tex): cada sección dice en su
-comentario quién la completa, y las desviaciones van completas en el
-Anexo A. Es el entregable 3 y vale 10 puntos.
+Terminado (19 de noviembre):
+[docs/informe/Informe-Grupo4.pdf](../docs/informe/Informe-Grupo4.pdf), 10 páginas de cuerpo más
+el Anexo A con las 25 desviaciones como ADR. La fuente en LaTeX está al lado.
 
 Los pull request abiertos de Dependabot no se mergean antes de entregar: dos
 suben de versión mayor las acciones con las que se despliega.
@@ -61,8 +59,9 @@ suben de versión mayor las acciones con las que se despliega.
 Listo y funcionando al 17 de noviembre:
 
 - La llave de firma de los certificados en Secret Manager, que el backend lee.
-- El transmisor desplegado, con dos trabajos de Cloud Scheduler activos:
-  `transmitir-bitacora` cada 30 minutos (D-19) y `volcado-bitacora` los lunes.
+- El transmisor desplegado, con tres trabajos de Cloud Scheduler activos:
+  `transmitir-bitacora` cada 30 minutos (D-19), `volcado-bitacora` los lunes
+  y `cadena-bitacora` el día 1 de cada mes.
 - Las migraciones hasta la 014 aplicadas. `app_migrate` solo lo tiene Carlos:
   quien necesite una migración la escribe en su PR y le avisa.
 - La cabecera HSTS en el borde, y el contenedor de OPA sin root escrito en su
