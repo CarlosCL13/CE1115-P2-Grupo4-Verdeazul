@@ -18,12 +18,12 @@ Desplegado en **https://verdeazul-edge-igwgmkeipa-uk.a.run.app**
 | Motor de políticas en Rego | Completo: 88 celdas y las condiciones C1 a C11 |
 | Pruebas de la matriz | 977, corren en cada pull request contra un OPA real |
 | Pruebas de integración | Identidad, certificación, enmiendas, asignaciones y bitácora, en cada pull request contra un PostgreSQL desechable con el mismo esquema |
-| Dependabot | Configurado para los cuatro componentes. Alerta atendida: CVE-2025-62727 en Starlette ([docs/Dependabot.md](docs/Dependabot.md)) |
+| Dependabot | Configurado para los cuatro componentes. Alerta atendida: CVE-2025-62727 en Starlette (PR #24), y el PR #34 de Dependabot aceptado tal como lo propuso ([docs/Dependabot.md](docs/Dependabot.md)) |
 | Autenticación | Completa: Argon2id, sesión en la base, segundo factor TOTP, bloqueo RC-01, reautenticación |
 | Endpoints de la matriz | Los 56, de O1 a O11 |
 | Firma de certificados | Completa: Ed25519 con la llave en Secret Manager, verificación pública a partir del archivo (D-09) y huella de la llave publicada (D-10) |
 | Bitácora | Completa: bandeja de salida, transmisor cada 30 minutos con cadena HMAC (Cloud Scheduler), comprobación de la cadena (`cadena`), revocación de lo vencido (`vencer`) y copia semanal a Cloud Storage con retención de diez años (`volcado`) |
-| Informe | En LaTeX: [docs/informe/Informe-Grupo4.tex](docs/informe/Informe-Grupo4.tex), con las desviaciones completas en el Anexo A |
+| Informe | Terminado: [docs/informe/Informe-Grupo4.pdf](docs/informe/Informe-Grupo4.pdf), 10 páginas de cuerpo más el Anexo A con las desviaciones como ADR. La fuente en LaTeX está al lado, en [Informe-Grupo4.tex](docs/informe/Informe-Grupo4.tex) |
 
 ## Estructura
 
@@ -35,7 +35,9 @@ db/
   migrations/              Esquema de verdeazul-app
   bitacora/                Esquema de verdeazul-bitacora, instancia separada
   roles/                   los cinco roles de privilegio minimo
-docs/                      Desviaciones respecto al diseño de la Parte 1
+docs/
+  informe/                 El informe (PDF y fuente en LaTeX) y sus capturas
+  Dependabot.md            Qué propuso Dependabot y qué se hizo con cada PR
 services/
   api/                     Backend, punto de aplicación (PEP)
   edge/                    Servicio de borde: interfaz y único expuesto a internet
@@ -47,18 +49,21 @@ tests/certificacion/       Fincas, períodos y mediciones
 tests/enmiendas/           O4: C4, C5, C11 y la máquina de estados
 tests/asignaciones/        O8: quién asigna, C1 y revocar el mismo día
 tests/bitacora/            O11: lectura, exportación, C7 y que log_reader no escribe
+tests/certificados/        O5: firma, C6, verificación, anular, y C7, C8 y C9
+tests/consentimientos/     O7: quién autoriza (C8), extender y revocar
+tests/borde/               Páginas, cabeceras, CSRF y origen, con un backend falso
 .github/
   workflows/               Integración continua y despliegue
   dependabot.yml           Revisión semanal de dependencias
 ```
 
-Los cuatro componentes de `services/` corresponden uno a uno con la arquitectura de la Parte 1 y cada uno tiene su propia imagen, como exige §3.2 del enunciado. El motor de políticas, el esquema, el transmisor y la bitácora están completos, y el backend tiene identidad, certificación, enmiendas y asignaciones. Faltan O5 certificados y O7 consentimientos. Lo que falta para la entrega está en la sección «Dónde estamos» de [contracts/README.md](contracts/README.md), y el informe en [docs/informe/Informe-Grupo4.tex](docs/informe/Informe-Grupo4.tex).
+Los cuatro componentes de `services/` corresponden uno a uno con la arquitectura de la Parte 1 y cada uno tiene su propia imagen, como exige §3.2 del enunciado. Todo está completo: el motor de políticas, el esquema, el transmisor, la bitácora y los 56 endpoints del backend, de O1 a O11. Quién hizo cada parte está en la sección «Dónde estamos» de [contracts/README.md](contracts/README.md), y el informe en [docs/informe/Informe-Grupo4.pdf](docs/informe/Informe-Grupo4.pdf).
 
 Los documentos de la Parte 1 y el enunciado no se versionan. Están en el disco de cada uno pero fuera de git: el enunciado es material del profesor y este repositorio es público, y los documentos de la Parte 1 pesan 5.9 MB que el profesor ya tiene. Lo que sí se consulta a diario está transcrito en [contracts/matriz.md](contracts/matriz.md).
 
 ## Correspondencia con el diseño de la Parte 1
 
-Cada componente de este repositorio corresponde a uno del documento de arquitectura. Las diferencias están documentadas como ADR en el Anexo A del informe, [docs/informe/Informe-Grupo4.tex](docs/informe/Informe-Grupo4.tex).
+Cada componente de este repositorio corresponde a uno del documento de arquitectura. Las diferencias están documentadas como ADR en el Anexo A del informe, [docs/informe/Informe-Grupo4.pdf](docs/informe/Informe-Grupo4.pdf).
 
 | Componente del diseño | Aquí |
 |---|---|
@@ -191,7 +196,9 @@ Cada etiqueta es el commit del que salió la imagen, así que `git show <etiquet
 
 | Etiqueta | Imágenes | Fecha | Qué trajo |
 |---|---|---|---|
-| `b6078f7` | api, policies, edge, transmisor | 2026-11-18 | PR #37: un solo período de medición abierto a la vez (D-22). **Es la que corre hoy** |
+| `1194a48` | api, policies, edge, transmisor | 2026-11-19 | PR #34 de Dependabot: `fastapi` 0.163.1 y `psycopg` 3.3.9 en el transmisor. **Es la que corre hoy** y la que declara el informe |
+| `0957249` | api, policies, edge, transmisor | 2026-11-19 | PR #38: HSTS en el borde, OPA sin root escrito en su Dockerfile y el informe en LaTeX |
+| `b6078f7` | api, policies, edge, transmisor | 2026-11-18 | PR #37: un solo período de medición abierto a la vez (D-22) |
 | `cdd6037` | api, policies, edge, transmisor | 2026-11-17 | PR #36: O5 completo, listar, ver, anular y exportar certificados |
 | `73c0c1c` | api, policies, edge, transmisor | 2026-11-17 | PR #35: O7 consentimientos |
 | `3764ccd` | api, policies, edge, transmisor | 2026-11-17 | PR #28: firma Ed25519, emitir con C6 y verificación pública |
