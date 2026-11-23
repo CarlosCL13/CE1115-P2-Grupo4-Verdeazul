@@ -1,6 +1,6 @@
 # Versiones exactas, las mismas que el backend.
 
-fastapi==0.163.1
+fastapi==0.165.0
 uvicorn[standard]==0.54.0
 
 psycopg[binary]==3.3.9
