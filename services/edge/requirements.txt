@@ -6,10 +6,10 @@
 # fastapi 0.162.2 trae Starlette 1.10.0, que corrige CVE-2025-62727: un
 # encabezado Range armado agotaba la CPU en StaticFiles, y el borde sirve
 # /static a internet.
-fastapi==0.162.2
+fastapi==0.165.0
 uvicorn[standard]==0.54.0
 jinja2==3.1.6
 httpx==0.28.1
 
 # Para leer los formularios (Form) de las pantallas.
-python-multipart==0.0.33
+python-multipart==0.0.34
