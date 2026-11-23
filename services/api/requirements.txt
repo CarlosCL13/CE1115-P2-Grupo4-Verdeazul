@@ -1,7 +1,7 @@
 # Versiones exactas. P1 se comprometio a dependencias fijadas (E4, ficha de
 # lenguaje), y Dependabot avisa mejor sobre versiones fijas que sobre rangos.
 
-fastapi==0.162.2
+fastapi==0.165.0
 uvicorn[standard]==0.54.0
 
 # Habla con el motor de politicas en el contenedor adjunto. Se eligio sobre
@@ -9,7 +9,7 @@ uvicorn[standard]==0.54.0
 # peticion del usuario y un handshake TCP por cada una se nota.
 httpx==0.28.1
 
-psycopg[binary]==3.3.8
+psycopg[binary]==3.3.9
 psycopg_pool==3.3.3
 
 # Las autoridades certificadoras de Mozilla, para que sslmode=verify-full
@@ -30,7 +30,7 @@ argon2-cffi==25.1.0
 cryptography==50.0.2
 
 # TOTP del RFC 6238, el segundo factor.
-pyotp==2.10.0
+pyotp==2.12.1
 
 # El codigo QR del alta del segundo factor, como SVG. Python puro, sin Pillow.
 segno==1.6.6
